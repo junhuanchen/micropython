@@ -111,6 +111,8 @@ INC_ESPCOMP += -I$(ESPCOMP)/app_trace/include
 INC_ESPCOMP += -I$(ESPCOMP)/app_update/include
 INC_ESPCOMP += -I$(ESPCOMP)/pthread/include
 INC_ESPCOMP += -I$(ESPCOMP)/smartconfig_ack/include
+INC_ESPCOMP += -I$(ESPCOMP)/mdns/include
+INC_ESPCOMP += -I$(ESPCOMP)/mdns/private_include
 
 # these flags are common to C and C++ compilation
 CFLAGS_COMMON = -Os -ffunction-sections -fdata-sections -fstrict-volatile-bitfields \
@@ -192,6 +194,11 @@ SRC_C = \
 	machine_wdt.c \
 	mpthreadport.c \
 	machine_rtc.c \
+	zwlib/Crc.c \
+	zwlib/Rsa.c \
+	zwlib/BaseSeven.c \
+	zwlib/ZwTransit.c \
+	zwlib/modzwlib.c \
 	$(SRC_MOD)
 
 EXTMOD_SRC_C = $(addprefix extmod/,\
@@ -665,6 +672,11 @@ ESPIDF_WPA_SUPPLICANT_O = $(addprefix $(ESPCOMP)/wpa_supplicant/,\
 	port/os_xtensa.o \
 	)
 
+ESPIDF_MDNS_O = $(addprefix $(ESPCOMP)/mdns/,\
+	mdns.o \
+	mdns_networking.o \
+	)
+
 OBJ_ESPIDF =
 OBJ_ESPIDF += $(addprefix $(BUILD)/, $(ESPIDF_NEWLIB_O))
 OBJ_ESPIDF += $(addprefix $(BUILD)/, $(ESPIDF_DRIVER_O))
@@ -693,6 +705,7 @@ OBJ_ESPIDF += $(addprefix $(BUILD)/, $(ESPIDF_SMARTCONFIG_ACK_O))
 OBJ_ESPIDF += $(addprefix $(BUILD)/, $(ESPIDF_SPI_FLASH_O))
 OBJ_ESPIDF += $(addprefix $(BUILD)/, $(ESPIDF_ULP_O))
 OBJ_ESPIDF += $(addprefix $(BUILD)/, $(ESPIDF_WPA_SUPPLICANT_O))
+OBJ_ESPIDF += $(addprefix $(BUILD)/, $(ESPIDF_MDNS_O))
 
 $(OBJ_ESPIDF): $(SDKCONFIG_H)
 
@@ -723,6 +736,7 @@ LIB_ESPIDF += ulp
 LIB_ESPIDF += lwip
 LIB_ESPIDF += mbedtls
 LIB_ESPIDF += wpa_supplicant
+LIB_ESPIDF += mdns
 
 BUILD_ESPIDF_LIB = $(BUILD)/esp-idf
 
@@ -763,6 +777,7 @@ $(eval $(call gen_espidf_lib_rule,ulp,$(ESPIDF_ULP_O)))
 $(eval $(call gen_espidf_lib_rule,lwip,$(ESPIDF_LWIP_O)))
 $(eval $(call gen_espidf_lib_rule,mbedtls,$(ESPIDF_MBEDTLS_O)))
 $(eval $(call gen_espidf_lib_rule,wpa_supplicant,$(ESPIDF_WPA_SUPPLICANT_O)))
+$(eval $(call gen_espidf_lib_rule,mdns,$(ESPIDF_MDNS_O)))
 
 LIB = $(foreach lib,$(LIB_ESPIDF),$(BUILD_ESPIDF_LIB)/$(lib)/lib$(lib).a)
 

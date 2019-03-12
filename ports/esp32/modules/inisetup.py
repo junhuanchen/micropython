@@ -38,5 +38,7 @@ def setup():
 #esp.osdebug(None)
 #import webrepl
 #webrepl.start()
+import wifi
+wifi.ready()
 """)
     return vfs

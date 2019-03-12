@@ -689,6 +689,8 @@ STATIC mp_obj_t esp_phy_mode(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(esp_phy_mode_obj, 0, 1, esp_phy_mode);
 
+#include "modmdns.h"
+#include "modsmartconfig.h"
 
 STATIC const mp_rom_map_elem_t mp_module_network_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_network) },
@@ -698,6 +700,9 @@ STATIC const mp_rom_map_elem_t mp_module_network_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_PPP), MP_ROM_PTR(&ppp_make_new_obj) },
     { MP_ROM_QSTR(MP_QSTR_phy_mode), MP_ROM_PTR(&esp_phy_mode_obj) },
 
+	{ MP_ROM_QSTR(MP_QSTR_mDNS), (mp_obj_type_t *)&mdns_type },
+    { MP_ROM_QSTR(MP_QSTR_smartconfig), MP_ROM_PTR(&esp_smartconfig_obj) },
+	
 #if MODNETWORK_INCLUDE_CONSTANTS
     { MP_ROM_QSTR(MP_QSTR_STA_IF), MP_ROM_INT(WIFI_IF_STA)},
     { MP_ROM_QSTR(MP_QSTR_AP_IF), MP_ROM_INT(WIFI_IF_AP)},
