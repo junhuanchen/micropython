@@ -8,12 +8,12 @@
 #ifdef _MFC_
 extern void _cdecl TrayPrintf(const char * _Format, ...);
 #define PutInfo(format, ...) TrayPrintf(format, ##__VA_ARGS__)
-#define PutError(error) TrayPrintf("%s, ´íÎó´úÂë : %d¡£\n", error, GetLastError())
+#define PutError(error) TrayPrintf("%s, é”™è¯¯ä»£ç  : %dã€‚\n", error, GetLastError())
 #else
 #include <stdio.h>
 #define PutInfo(format, ...) printf(format, ##__VA_ARGS__)
 #define LogError(format, ...) printf(format, ##__VA_ARGS__)
-#define PutError(error) printf("%s, ´íÎó´úÂë : %lu¡£\n", error, GetLastError())
+#define PutError(error) printf("%s, é”™è¯¯ä»£ç  : %luã€‚\n", error, GetLastError())
 #endif
 #else
 #define PutInfo(format, ...)

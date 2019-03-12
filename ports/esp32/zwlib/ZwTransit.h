@@ -16,24 +16,24 @@ extern "C++"
 {
 #endif
 
-	// ÈÕÖ¾Êä³ö
+	// æ—¥å¿—è¾“å‡º
 #include "FrameWork.h"
 
-	// ´«ÊäÄ£¿é³õÊ¼»¯
+	// ä¼ è¾“æ¨¡å—åˆå§‹åŒ–
 	void ZwTranInit(void);
 
 	uint8_t ZwTranCheck(uint8_t Buf[], uint8_t Len);
 
 	typedef struct zw_transit_binary
 	{
-		uint8_t DevIP[1];	// Éè±¸µÄµØÖ·Öµ
-		uint8_t DevTm[4];	// ·â°üÊ±Éè±¸ÃëÊ±¼ä
-		uint8_t EntID[1];	// ËùÊôÆóÒµµÄ±êÊ¶Öµ
-		uint8_t DevMs[2];	// ·â°üÊ±Éè±¸ºÁÃëÊ±¼ä
-		uint8_t DevID[13];	// Éè±¸µÄÎ¨Ò»±êÊ¶Öµ
+		uint8_t DevIP[1];	// è®¾å¤‡çš„åœ°å€å€¼
+		uint8_t DevTm[4];	// å°åŒ…æ—¶è®¾å¤‡ç§’æ—¶é—´
+		uint8_t EntID[1];	// æ‰€å±ä¼ä¸šçš„æ ‡è¯†å€¼
+		uint8_t DevMs[2];	// å°åŒ…æ—¶è®¾å¤‡æ¯«ç§’æ—¶é—´
+		uint8_t DevID[13];	// è®¾å¤‡çš„å”¯ä¸€æ ‡è¯†å€¼
 	}ZwTransitBinary;
 
-	typedef void(*ExternGetTime)(uint32_t *sec, uint16_t *ms); /** < 32Î»¶ş½øÖÆÊ±¼äÖµÓë16Î»¶ş½øÖÆºÁÃëÖµ  */
+	typedef void(*ExternGetTime)(uint32_t *sec, uint16_t *ms); /** < 32ä½äºŒè¿›åˆ¶æ—¶é—´å€¼ä¸16ä½äºŒè¿›åˆ¶æ¯«ç§’å€¼  */
 
 	typedef uint8_t ZwEncodeType;
 
@@ -45,7 +45,7 @@ extern "C++"
 		ZwTranTypeLen = sizeof(ZwEncodeType),
 		ZwTranCrcLen = sizeof(crc),
 		ZwBinaryLen = sizeof(ZwTransitBinary) / BsEncodeLen * BsDecodeLen,
-		ZwEncodeCoreLen = ZwTranTypeLen + ZwTranCrcLen + ZwBinaryLen + 1, // + 1 Îª '\0' Õ¼Î»·û
+		ZwEncodeCoreLen = ZwTranTypeLen + ZwTranCrcLen + ZwBinaryLen + 1, // + 1 ä¸º '\0' å ä½ç¬¦
 		ZwContentMax = (ZwTranMax - ZwEncodeCoreLen),
 		ZwCmdMax = ZwContentMax - 1,
 	};
@@ -78,7 +78,7 @@ extern "C++"
 		ZwTransitBinary Zip;
 	}ZwDecode;
 
-	// ³õÊ¼»¯½â°ü²Ù×÷ËùĞè½á¹¹
+	// åˆå§‹åŒ–è§£åŒ…æ“ä½œæ‰€éœ€ç»“æ„
 	void ZwDecodeInit(ZwDecode *Self, uint8_t Crypt);
 
 	uint8_t* ZwDecodeCore(ZwDecode * Self, uint8_t *Pack, uint8_t PackLen);

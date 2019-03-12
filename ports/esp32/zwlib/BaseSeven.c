@@ -1,7 +1,7 @@
 #include "BaseSeven.h"
 #include <string.h>
 
-// ±àÂëÊı¾İ×ª»»½á¹¹
+// ç¼–ç æ•°æ®è½¬æ¢ç»“æ„
 union BSVar
 {
 	uint16_t bit16;
@@ -11,7 +11,7 @@ union BSVar
 	}bit08;
 };
 
-// Í¬²½ĞŞ¸ÄË÷Òı½øĞĞ¿é±àÂë¡££¨ÓÉºê¸Ä£©
+// åŒæ­¥ä¿®æ”¹ç´¢å¼•è¿›è¡Œå—ç¼–ç ã€‚ï¼ˆç”±å®æ”¹ï¼‰
 static void BsEncode(uint8_t *Buf[], uint8_t *Src[])
 {
 	union BSVar var = { 0 };
@@ -25,16 +25,16 @@ static void BsEncode(uint8_t *Buf[], uint8_t *Src[])
 
 uint8_t BaseSevenEncode(uint8_t Buf[], uint32_t BufLen, uint8_t Src[], uint32_t SrcLen)
 {
-	// ÅĞ¶Ï±àÂë»º³åÇøÊÇ·ñ¿ÉÈİÄÉÊı¾İÔ´
+	// åˆ¤æ–­ç¼–ç ç¼“å†²åŒºæ˜¯å¦å¯å®¹çº³æ•°æ®æº
 	if ((BufLen / 8) * 7 >= SrcLen)
 	{
 		while (SrcLen >= 7)
 		{
 			BsEncode(&Buf, &Src);
-			// ×¼±¸ÏÂÒ»¸ö±àÂë¿é
+			// å‡†å¤‡ä¸‹ä¸€ä¸ªç¼–ç å—
 			Buf++, SrcLen -= 7;
 		}
-		// ´¦Àí²»×ãÒ»¸öµ¥Î»µÄ²¿·Ö
+		// å¤„ç†ä¸è¶³ä¸€ä¸ªå•ä½çš„éƒ¨åˆ†
 		if (SrcLen)
 		{
 			uint8_t TmpBuf[7] = { '\0' }, *TmpSrc = TmpBuf;
@@ -50,14 +50,14 @@ uint8_t BaseSevenDecode(uint8_t Buf[], uint32_t BufLen, uint8_t Src[], uint32_t 
 {
 	if ((BufLen / 8) * 7 <= SrcLen)
 	{
-		// Êı¾İÎ»ÒÆ³¤¶ÈÖµ
+		// æ•°æ®ä½ç§»é•¿åº¦å€¼
 		for (union BSVar var; BufLen; BufLen -= 8)
 		{
-			// ÒÔ8×Ö½ÚÎª½âÂëµ¥Î»³¤¶È
+			// ä»¥8å­—èŠ‚ä¸ºè§£ç å•ä½é•¿åº¦
 			var.bit08.left = (*Buf++);
 			for (uint8_t shift = 1; 8 != shift; Buf++, Src++, shift++)
 			{
-				if (!(*Buf & 0x80)) return 0; // Òì³£±àÂëÖµ
+				if (!(*Buf & 0x80)) return 0; // å¼‚å¸¸ç¼–ç å€¼
 				var.bit08.right = *Buf << 1, var.bit16 <<= shift;
 				*Src = var.bit08.left, var.bit16 <<= 7 - shift;
 			}
@@ -67,7 +67,7 @@ uint8_t BaseSevenDecode(uint8_t Buf[], uint32_t BufLen, uint8_t Src[], uint32_t 
 	return 0;
 }
 
-// µ¥Ôª²âÊÔ
+// å•å…ƒæµ‹è¯•
 #ifdef UNIT_TEST
 
 #include <assert.h>

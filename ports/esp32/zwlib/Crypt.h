@@ -8,14 +8,14 @@
 #include "HardWare.h"
 #endif
 
-// Rsa ÔËËãÒ»¶¨ÊÇÎÞ·ûºÅµÄÕûÊý¡£
-// Ecc ÔËËãÒ»¶¨ÊÇÓÐ·ûºÅµÄ£¨ÒòÎªÓÐ¸ºÔª£©¡£
-// ×¢£ºÄ£ÃÝº¯ÊýÖ»Ö§³ÖÎÞ·ûºÅµÄ¡£
-// ¸ºÊýÊÇÓÐ·ûºÅ£¬·´Ö®ÎªÎÞ·ûºÅ¡£
-// ÃÜÂë£¨ÔËËã£©°²È«ºê¶¨ÒåÖÐµÄ»ã±à²»Ò»¶¨Í¨ÓÃ£¬ÓÈÆäÊÇ64Î»»·¾³ÏÂÒª¶ÔÓ¦ÒÆÖ²¡£
+// Rsa è¿ç®—ä¸€å®šæ˜¯æ— ç¬¦å·çš„æ•´æ•°ã€‚
+// Ecc è¿ç®—ä¸€å®šæ˜¯æœ‰ç¬¦å·çš„ï¼ˆå› ä¸ºæœ‰è´Ÿå…ƒï¼‰ã€‚
+// æ³¨ï¼šæ¨¡å¹‚å‡½æ•°åªæ”¯æŒæ— ç¬¦å·çš„ã€‚
+// è´Ÿæ•°æ˜¯æœ‰ç¬¦å·ï¼Œåä¹‹ä¸ºæ— ç¬¦å·ã€‚
+// å¯†ç ï¼ˆè¿ç®—ï¼‰å®‰å…¨å®å®šä¹‰ä¸­çš„æ±‡ç¼–ä¸ä¸€å®šé€šç”¨ï¼Œå°¤å…¶æ˜¯64ä½çŽ¯å¢ƒä¸‹è¦å¯¹åº”ç§»æ¤ã€‚
 #define ECC_RSA_8
 #ifdef ECC_RSA_8
-// Ä¿Ç°Ê¹ÓÃµÄ RSA ÅäÖÃ
+// ç›®å‰ä½¿ç”¨çš„ RSA é…ç½®
 typedef int8_t CryptInt;
 typedef uint8_t CryptUint;
 #elif defined(ECC_RSA_64)
@@ -27,20 +27,20 @@ typedef uint64_t CryptUint;
 #error "select a config"
 #endif
 
-// MontgomeryÔËËãº¯ÊýÖ¸Õë
+// Montgomeryè¿ç®—å‡½æ•°æŒ‡é’ˆ
 typedef CryptUint(*CryptMontgomeryPointer)(CryptUint, CryptUint, CryptUint);
 
-// return (a - b) % mod ¶¨Òåºê¿ÉÒÔÈ·±£ÔËÐÐ°²È«¡£
+// return (a - b) % mod å®šä¹‰å®å¯ä»¥ç¡®ä¿è¿è¡Œå®‰å…¨ã€‚
 static CryptInt CryptSafeSubMod(CryptInt a, CryptInt b, CryptInt mod)
 {
 #ifdef CRYPT_SUB_SAFE
-	// È¡³ö±ê¼Ç¼Ä´æÆ÷
+	// å–å‡ºæ ‡è®°å¯„å­˜å™¨
 	unsigned short flag = 0;
-	// ÔËËã½á¹û
+	// è¿ç®—ç»“æžœ
 	CryptInt result;
-	// ×÷È¡³ö»ã±à´úÂëÓÃ
+	// ä½œå–å‡ºæ±‡ç¼–ä»£ç ç”¨
 	// result = (a - b);
-#if (CRYPT_SUB_SAFE == -32) // ÓÐ·ûºÅ32Î»ÕûÐÍ
+#if (CRYPT_SUB_SAFE == -32) // æœ‰ç¬¦å·32ä½æ•´åž‹
 	__asm
 	{
 		mov         eax, dword ptr[a]
@@ -50,7 +50,7 @@ static CryptInt CryptSafeSubMod(CryptInt a, CryptInt b, CryptInt mod)
 		mov         dword ptr[result], eax
 	}
 #elif  (CRYPT_SUB_SAFE == -64)
-	// /Z7¡¢/Zi¡¢/ZI£¨µ÷ÊÔÐÅÏ¢¸ñÊ½£©²»Í¬»á²úÉú²»Í¬µÄ»ã±à´úÂë£¬Õâ²¿·Ö»ã±à²»Í¨ÓÃ¡£
+	// /Z7ã€/Ziã€/ZIï¼ˆè°ƒè¯•ä¿¡æ¯æ ¼å¼ï¼‰ä¸åŒä¼šäº§ç”Ÿä¸åŒçš„æ±‡ç¼–ä»£ç ï¼Œè¿™éƒ¨åˆ†æ±‡ç¼–ä¸é€šç”¨ã€‚
 	// result = (a - b);
 	__asm
 	{
@@ -78,20 +78,20 @@ static CryptInt CryptSafeSubMod(CryptInt a, CryptInt b, CryptInt mod)
 	result = (a - b);
 #endif
 
-	// ÅÐ¶ÏÊÇ·ñÒç³ö£¬·Ç¼Ä´æÆ÷»ã±àÐÎÊ½ÔòÅÐ¶Ï×ö²îºó·ûºÅÎ»¡£
-	// a > 0 && b < 0 && res < 0(»òÖ±½Ó¼ì²é·ûºÅÎ») => ÉÏÒç³ö
-	// a < 0 && b > 0 && res > 0(»òÖ±½Ó¼ì²é·ûºÅÎ») => ÏÂÒç³ö
-	// µ±×´Ì¬¼Ä´æÆ÷´æÔÚOF½øÎ»±ê¼ÇµÄÊ±ºò0x800 == (flag & 0x800)¡£
+	// åˆ¤æ–­æ˜¯å¦æº¢å‡ºï¼Œéžå¯„å­˜å™¨æ±‡ç¼–å½¢å¼åˆ™åˆ¤æ–­åšå·®åŽç¬¦å·ä½ã€‚
+	// a > 0 && b < 0 && res < 0(æˆ–ç›´æŽ¥æ£€æŸ¥ç¬¦å·ä½) => ä¸Šæº¢å‡º
+	// a < 0 && b > 0 && res > 0(æˆ–ç›´æŽ¥æ£€æŸ¥ç¬¦å·ä½) => ä¸‹æº¢å‡º
+	// å½“çŠ¶æ€å¯„å­˜å™¨å­˜åœ¨OFè¿›ä½æ ‡è®°çš„æ—¶å€™0x800 == (flag & 0x800)ã€‚
 	if (0x800 == (flag & 0x800))
 	{
-		// a != 0£¬·ñÔòÔõ»áÒç³ö¡£
-		// a - b ¿ÉÄÜ ÉÏÒç³ö»òÏÂÒç³ö
-		// ÍÆ¶Ï a > 0 => b < 0 ²ÅÄÜÉÏÒç³ö
-		// ÍÆ¶Ï a < 0 => b > 0 ²ÅÄÜÏÂÒç³ö
+		// a != 0ï¼Œå¦åˆ™æ€Žä¼šæº¢å‡ºã€‚
+		// a - b å¯èƒ½ ä¸Šæº¢å‡ºæˆ–ä¸‹æº¢å‡º
+		// æŽ¨æ–­ a > 0 => b < 0 æ‰èƒ½ä¸Šæº¢å‡º
+		// æŽ¨æ–­ a < 0 => b > 0 æ‰èƒ½ä¸‹æº¢å‡º
 		b += (a > 0) ? mod : -mod;
 		result = (a - b);
 	}
-	// ÓÐ·ûºÅµÄÐ¡ÓÚÁãÐÞÕý»ØÕýÕûÊý,ÒòÎªÍâ²¿PowModµÄµ×ÊýºÍÃÝÖ¸Êý¾ùÎªÕýÊý¡£
+	// æœ‰ç¬¦å·çš„å°äºŽé›¶ä¿®æ­£å›žæ­£æ•´æ•°,å› ä¸ºå¤–éƒ¨PowModçš„åº•æ•°å’Œå¹‚æŒ‡æ•°å‡ä¸ºæ­£æ•°ã€‚
 	while (result < 0) result += mod;
 	return result;
 
@@ -108,18 +108,18 @@ static CryptUint CryptSafeAddMod(CryptUint a, CryptUint b, CryptUint mod)
 {
 #ifdef CRYPT_ADD_SAFE
 #if (CRYPT_ADD_SAFE < 0)
-	// ¼ÙÉèÒÑÖªÊÇÓÐ·ûºÅ²ÎÊý
-	// ¿ÉÒÔÀûÓÃc >= a, c >= b => a + b <= 2*c
-	// ÆäÖÐ2*c¼´ÎªÎÞ·ûºÅÊýµÄ×î´óÖµ£¨·ûºÅÎ»£©¡£
+	// å‡è®¾å·²çŸ¥æ˜¯æœ‰ç¬¦å·å‚æ•°
+	// å¯ä»¥åˆ©ç”¨c >= a, c >= b => a + b <= 2*c
+	// å…¶ä¸­2*cå³ä¸ºæ— ç¬¦å·æ•°çš„æœ€å¤§å€¼ï¼ˆç¬¦å·ä½ï¼‰ã€‚
 	CryptUint m = (a + b);
 	while (m > mod) m -= mod;
 	return m;
-#else  // ¼ÙÉèÒÑÖªÊÇÓÐ·ûºÅ²ÎÊý£¬¶ÁÈ¡FLAG¼Ä´æÆ÷CFÖµÅÐ¶ÏÊÇ·ñÒç³ö£¬ºó½«Æä¾ÀÕý¡£
-	// ÓÉÓÚ(a + a)ÖÐaÎª×î´óÖµ½áºÏÊ±»áµ¼ÖÂÊý¾ÝÒç³ö£¬Òç³öÖµ±£ÁôÓàÊýÎª0£¬Î»×´Ì¬±£´æÔÚCF¼Ä´æÆ÷£¬
-	// µ«Êµ¼ÊÉÏÍ¨¹ýmod²Ù×÷ºóÓ¦¸Ã»Ø¹öÐ¡ÓÚÆä×î´óÖµ£¬ËùÒÔ¸Ã¼Ó·¨¶ÔÕâÒ»¸öÇé¿ö½øÐÐµ÷Õû¡£
-	// È¡³ö±ê¼Ç¼Ä´æÆ÷
+#else  // å‡è®¾å·²çŸ¥æ˜¯æœ‰ç¬¦å·å‚æ•°ï¼Œè¯»å–FLAGå¯„å­˜å™¨CFå€¼åˆ¤æ–­æ˜¯å¦æº¢å‡ºï¼ŒåŽå°†å…¶çº æ­£ã€‚
+	// ç”±äºŽ(a + a)ä¸­aä¸ºæœ€å¤§å€¼ç»“åˆæ—¶ä¼šå¯¼è‡´æ•°æ®æº¢å‡ºï¼Œæº¢å‡ºå€¼ä¿ç•™ä½™æ•°ä¸º0ï¼Œä½çŠ¶æ€ä¿å­˜åœ¨CFå¯„å­˜å™¨ï¼Œ
+	// ä½†å®žé™…ä¸Šé€šè¿‡modæ“ä½œåŽåº”è¯¥å›žæ»šå°äºŽå…¶æœ€å¤§å€¼ï¼Œæ‰€ä»¥è¯¥åŠ æ³•å¯¹è¿™ä¸€ä¸ªæƒ…å†µè¿›è¡Œè°ƒæ•´ã€‚
+	// å–å‡ºæ ‡è®°å¯„å­˜å™¨
 	unsigned short flag = 0;
-	// ÔËËã½á¹û
+	// è¿ç®—ç»“æžœ
 	CryptInt result;
 	// result = (a + b);
 #if (CRYPT_ADD_SAFE == 32)
@@ -149,32 +149,32 @@ static CryptUint CryptSafeAddMod(CryptUint a, CryptUint b, CryptUint mod)
 	
 #elif ((CRYPT_ADD_SAFE == 16) || (CRYPT_ADD_SAFE == 8))
 #define TypeMax 0
-	// Êµ¼ù·¢ÏÖ×´Ì¬¼Ä´æÆ÷CFÎ»²¢Î´±ä»¯
-	// ÎÞ·ûºÅÒ²ÎÞ·¨ÅÐ¶Ï·ûºÅÎ»£¬´ËÊ±Ö»ÄÜÇ¿×ª¸ü´óÀàÐÍÈÝÄÉÊý¾Ý¡£
+	// å®žè·µå‘çŽ°çŠ¶æ€å¯„å­˜å™¨CFä½å¹¶æœªå˜åŒ–
+	// æ— ç¬¦å·ä¹Ÿæ— æ³•åˆ¤æ–­ç¬¦å·ä½ï¼Œæ­¤æ—¶åªèƒ½å¼ºè½¬æ›´å¤§ç±»åž‹å®¹çº³æ•°æ®ã€‚
 	result = ((size_t) a + b) % mod;
 	return result;
 #else 
 #error "set a type W"
 #endif
-	// µ±×´Ì¬¼Ä´æÆ÷´æÔÚCF½øÎ»±ê¼ÇµÄÊ±ºò1 == (flag & 1)¡£
+	// å½“çŠ¶æ€å¯„å­˜å™¨å­˜åœ¨CFè¿›ä½æ ‡è®°çš„æ—¶å€™1 == (flag & 1)ã€‚
 	if (1 == (flag & 1))
 	{
-		// a + b > TypeMax, (TypeMax - a - b) < 0, ½«ÆäÎª×ªÕý¼´¿É
+		// a + b > TypeMax, (TypeMax - a - b) < 0, å°†å…¶ä¸ºè½¬æ­£å³å¯
 		return -(TypeMax - a - b);
 	}
 	return result % mod;
 #endif
 #else 
-	// Ä¬ÈÏ²Ù×÷
+	// é»˜è®¤æ“ä½œ
 	return ((a + b) % mod);
 #endif
 }
 
-// Montgomery ¶þ½øÖÆËã·¨¿ò¼Ü
+// Montgomery äºŒè¿›åˆ¶ç®—æ³•æ¡†æž¶
 static void CryptMontgomeryFrame(CryptUint *ans, CryptMontgomeryPointer Func, CryptUint a, CryptUint b, CryptUint mod)
 {
 WHILE:
-	if (b & 1)// LSBÎ»Îª 1
+	if (b & 1)// LSBä½ä¸º 1
 	{
 		b--, *ans = Func(*ans, a, mod);
 	}
@@ -194,8 +194,8 @@ static CryptUint CryptFastMulMod(CryptUint a, CryptUint b, CryptUint mod)
 	return ans;
 }
 
-// ÃÝÄ£ÔËËãa^b%k£¨¼ÍÄî°æ£©
-// Í¨³£Ë¼Î¬±©Á¦Çó½â°æ±¾£¨Çë²»ÒªÊ¹ÓÃ¸Ã°æ±¾£¬²»È»»á¿ÞµÄ£©
+// å¹‚æ¨¡è¿ç®—a^b%kï¼ˆçºªå¿µç‰ˆï¼‰
+// é€šå¸¸æ€ç»´æš´åŠ›æ±‚è§£ç‰ˆæœ¬ï¼ˆè¯·ä¸è¦ä½¿ç”¨è¯¥ç‰ˆæœ¬ï¼Œä¸ç„¶ä¼šå“­çš„ï¼‰
 static CryptUint NormalPowMod(CryptUint a, CryptUint b, CryptUint mod)
 {
 	CryptUint ans = 1;
@@ -203,11 +203,11 @@ static CryptUint NormalPowMod(CryptUint a, CryptUint b, CryptUint mod)
 	return ans % mod;
 }
 
-// ÃÝÄ£ÔËËãa^b%k£¨¼ÍÄî°æ£©
-// £¨Ò²Çë²»ÒªÊ¹ÓÃ¸Ã°æ±¾£¬²»È»Ò²»á¿ÞµÄ£¬µÝ¹éÒç³ö£©
-// µÝ¹é°æ±¾ a ^ b (mod mod)
-// Ä£ÔËËã½áºÏÂÉ£º(a *a) mod mod =( (a mod mod) *a ) mod mod
-// C ÓïÑÔ±í´ï£º((a *b) % p = (a % p *b) % p)
+// å¹‚æ¨¡è¿ç®—a^b%kï¼ˆçºªå¿µç‰ˆï¼‰
+// ï¼ˆä¹Ÿè¯·ä¸è¦ä½¿ç”¨è¯¥ç‰ˆæœ¬ï¼Œä¸ç„¶ä¹Ÿä¼šå“­çš„ï¼Œé€’å½’æº¢å‡ºï¼‰
+// é€’å½’ç‰ˆæœ¬ a ^ b (mod mod)
+// æ¨¡è¿ç®—ç»“åˆå¾‹ï¼š(a *a) mod mod =( (a mod mod) *a ) mod mod
+// C è¯­è¨€è¡¨è¾¾ï¼š((a *b) % p = (a % p *b) % p)
 static CryptUint RecursionPowMod(CryptUint a, CryptUint b, CryptUint mod)
 {
 	return (b ? (a *RecursionPowMod(a, b - 1, mod)) : 1) % mod;
@@ -220,9 +220,9 @@ static CryptUint CryptFastPowMod(CryptUint a, CryptUint b, CryptUint mod)
 	return ans;
 }
 
-//  ·ÑÂíÐ¡¶¨ÀíÇó½â³Ë·¨ÄæÔª£º¼ÙÈçpÊÇÖÊÊý£¬ÇÒgcd(a,p)=1£¬ÄÇÃ´ a^(p?1) ¡Ô 1 (mod p)¡£
-// ËùÒÔ¶ÔÓÚaµÄÄæÔªx£¬ÓÐax¡Ô1(mod p)£¬µ±aÓëp»¥ÖÊÊ±£¬ÍÆ³öx = a^(p-2),¼´ÎªÆä³Ë·¨ÄæÔª¡£
-// Êµ¼ùÖÐ·¢ÏÖÆäÊµÏÖµÄÔÚÓëÍØÕ¹Å·¼¸ÀïºÎÇóÄæµÄÔËËã±È½ÏÆäÐ§ÂÊ²¢²»¸ß£¬ÓÈÆäÊÇn¼«´óµÄÊ±ºò¡£
+//  è´¹é©¬å°å®šç†æ±‚è§£ä¹˜æ³•é€†å…ƒï¼šå‡å¦‚pæ˜¯è´¨æ•°ï¼Œä¸”gcd(a,p)=1ï¼Œé‚£ä¹ˆ a^(p?1) â‰¡ 1 (mod p)ã€‚
+// æ‰€ä»¥å¯¹äºŽaçš„é€†å…ƒxï¼Œæœ‰axâ‰¡1(mod p)ï¼Œå½“aä¸Žpäº’è´¨æ—¶ï¼ŒæŽ¨å‡ºx = a^(p-2),å³ä¸ºå…¶ä¹˜æ³•é€†å…ƒã€‚
+// å®žè·µä¸­å‘çŽ°å…¶å®žçŽ°çš„åœ¨ä¸Žæ‹“å±•æ¬§å‡ é‡Œä½•æ±‚é€†çš„è¿ç®—æ¯”è¾ƒå…¶æ•ˆçŽ‡å¹¶ä¸é«˜ï¼Œå°¤å…¶æ˜¯næžå¤§çš„æ—¶å€™ã€‚
 static CryptInt CryptFermatInverse(CryptInt a, CryptInt n)
 {
 	return CryptFastPowMod(a, n - 2, n);
@@ -230,18 +230,18 @@ static CryptInt CryptFermatInverse(CryptInt a, CryptInt n)
 
 #include <stdio.h>
 
-// ¶þ½øÖÆÇóÄæ£ºÇ°ÌáÊÇ p ÊÇËØÊý£¬ÇÒ´óÓÚ¶þ£¬a ÊôÓÚ[1, p-1]¡£
-// ÒÑÖªÇ°Ìá£ºp ÎªÖÊÊý£¬´óÓÚ¶þµÄÖÊÊýÎªÒ»¶¨ÊÇÆæÊý¡£
-// ½â£ºa * x1 + p * y1 = u mod p ¢Ù
-// 	  a * x2 + p * y2 = v mod p ¢Ú
-// µ± u = 1 »ò v = 1 Ê±£¬x1 »ò y1 ½«ÎªÄæÔª¡£
-// ¿ÉÖª ¢Ù »ò ¢Ú µÄ u Óë p Âú×ãÅ¼ÊýÊ±£¬ÆäÊ½¿É³ý¶þ¡£
-// ÀýÈç£ºÈô u ÎªÅ¼Êý³ý¶þ£¬Ö±µ½³ýÎªÒ»Ê±£¬a * x1 ¾ù¿É³ý¶þ£¬Èç¹ûx1ÎªÅ¼ÊýÔò³ý¶þ
-// Èç¹ûx1ÎªÆæÊý£¬Ôò¿ÉÒÔp*(y1 - 1)½èÆæÊýºÏ²¢ÎªÅ¼Êý½øÐÐ³ý¶þ£¬Ö±µ½uÎªÆæÊý¡£
-// Í¬ÑùµÄ£¬vÒ²Âú×ãÉÏÊö×ª»»£¬Ö±µ½vÎªÆæÊý¡£
-// µ± u Óë v ¾ùÎªÆæÊýÊ±£¬½«×ö²î¸Ä±ä½Ï´óÖµÒ»·½ÎªÅ¼Êý£¬´ËÊ±ÓÖ¿ÉÒÔ»Øµ½ÉÏÊö½øÐÐÅ¼Êý×ª»»ÎªÆæÊý
-// Ö±µ½Ä³Ò»·½Âú×ãÁËµÈÓÚÒ»£¬ÔòËµÃ÷´ËÊ±µÄxÒÑ¾­Âú×ã a * x + p * y = 1, y ¿ÉÒÔÎªÈÎÒâÕûÊý£¬¹Êa * x = 1 mod p¡£
-// ½âµÃÆäÄæÔªx¡£
+// äºŒè¿›åˆ¶æ±‚é€†ï¼šå‰ææ˜¯ p æ˜¯ç´ æ•°ï¼Œä¸”å¤§äºŽäºŒï¼Œa å±žäºŽ[1, p-1]ã€‚
+// å·²çŸ¥å‰æï¼šp ä¸ºè´¨æ•°ï¼Œå¤§äºŽäºŒçš„è´¨æ•°ä¸ºä¸€å®šæ˜¯å¥‡æ•°ã€‚
+// è§£ï¼ša * x1 + p * y1 = u mod p â‘ 
+// 	  a * x2 + p * y2 = v mod p â‘¡
+// å½“ u = 1 æˆ– v = 1 æ—¶ï¼Œx1 æˆ– y1 å°†ä¸ºé€†å…ƒã€‚
+// å¯çŸ¥ â‘  æˆ– â‘¡ çš„ u ä¸Ž p æ»¡è¶³å¶æ•°æ—¶ï¼Œå…¶å¼å¯é™¤äºŒã€‚
+// ä¾‹å¦‚ï¼šè‹¥ u ä¸ºå¶æ•°é™¤äºŒï¼Œç›´åˆ°é™¤ä¸ºä¸€æ—¶ï¼Œa * x1 å‡å¯é™¤äºŒï¼Œå¦‚æžœx1ä¸ºå¶æ•°åˆ™é™¤äºŒ
+// å¦‚æžœx1ä¸ºå¥‡æ•°ï¼Œåˆ™å¯ä»¥p*(y1 - 1)å€Ÿå¥‡æ•°åˆå¹¶ä¸ºå¶æ•°è¿›è¡Œé™¤äºŒï¼Œç›´åˆ°uä¸ºå¥‡æ•°ã€‚
+// åŒæ ·çš„ï¼Œvä¹Ÿæ»¡è¶³ä¸Šè¿°è½¬æ¢ï¼Œç›´åˆ°vä¸ºå¥‡æ•°ã€‚
+// å½“ u ä¸Ž v å‡ä¸ºå¥‡æ•°æ—¶ï¼Œå°†åšå·®æ”¹å˜è¾ƒå¤§å€¼ä¸€æ–¹ä¸ºå¶æ•°ï¼Œæ­¤æ—¶åˆå¯ä»¥å›žåˆ°ä¸Šè¿°è¿›è¡Œå¶æ•°è½¬æ¢ä¸ºå¥‡æ•°
+// ç›´åˆ°æŸä¸€æ–¹æ»¡è¶³äº†ç­‰äºŽä¸€ï¼Œåˆ™è¯´æ˜Žæ­¤æ—¶çš„xå·²ç»æ»¡è¶³ a * x + p * y = 1, y å¯ä»¥ä¸ºä»»æ„æ•´æ•°ï¼Œæ•…a * x = 1 mod pã€‚
+// è§£å¾—å…¶é€†å…ƒxã€‚
 static CryptInt CryptBinaryInverse(CryptInt a, CryptInt n)
 {
 	CryptInt u = a, v = n;
@@ -280,7 +280,7 @@ static CryptInt CryptBinaryInverse(CryptInt a, CryptInt n)
 	// return (1 == u) ? x1 % n : x2 % n;
 }
 
-// Å·À­º¯Êý£º¦Õ(x) = x ¡Ç (1-1/p)£¨PÊÇÊýNµÄÖÊÒòÊý£©
+// æ¬§æ‹‰å‡½æ•°ï¼šÏ†(x) = x âˆ (1-1/p)ï¼ˆPæ˜¯æ•°Nçš„è´¨å› æ•°ï¼‰
 static CryptUint CryptEular(CryptUint n)
 {
 	CryptUint ret = 1;
@@ -302,22 +302,22 @@ static CryptUint CryptEular(CryptUint n)
 	return ret;
 }
 
-// Å·¼¸ÀïºÎº¯Êý£ºGcd(a, b£©= Gcd(b, a%b)
+// æ¬§å‡ é‡Œä½•å‡½æ•°ï¼šGcd(a, bï¼‰= Gcd(b, a%b)
 static CryptUint CryptGcd(CryptUint a, CryptUint b)
 {
 	return 0 == b ? a : CryptGcd(b, a % b);
 }
 
-// ÍØÕ¹Å·¼¸ÀïºÎº¯Êý£ºa*x + b*y = gcd(a, b)
+// æ‹“å±•æ¬§å‡ é‡Œä½•å‡½æ•°ï¼ša*x + b*y = gcd(a, b)
 //	  gcd(a, b) = gcd(b, a%b)
 //    a%b = a-(a/b)*b
 //    a*x + b*y = gcd(a, b) = gcd(b, a%b) = b*x1 + (a-(a/b)*b)*y1
-//        = b*x1 + a*y1¨C(a/b)*b*y1
-//        = a*y1 + b*(x1¨Ca/b*y1)
+//        = b*x1 + a*y1â€“(a/b)*b*y1
+//        = a*y1 + b*(x1â€“a/b*y1)
 static CryptInt CryptEgcd(CryptInt a, CryptInt b, CryptInt *x, CryptInt *y)
 {
 	CryptInt result, tmp;
-	// µÝ¹éÖÕÖ¹Ìõ¼þ
+	// é€’å½’ç»ˆæ­¢æ¡ä»¶
 	if (0 == b)
 	{
 		*x = 1, *y = 0;
@@ -325,14 +325,14 @@ static CryptInt CryptEgcd(CryptInt a, CryptInt b, CryptInt *x, CryptInt *y)
 	}
 	result = CryptEgcd(b, a % b, x, y);
 	tmp = *x, *x = *y;
-	// ¿ÉÒÔ¿¼ÂÇ³Ë·¨ÓÅ»¯
+	// å¯ä»¥è€ƒè™‘ä¹˜æ³•ä¼˜åŒ–
 	*y = tmp - (a / b) * (*y);
 	return result;
 }
 
-// Çó½â³Ë·¨ÄæÔªº¯Êý a * (return value) ¡Ô 1 (mod n)¡£
-// Ç°ÌáÊÇÁ½Õß»¥ÎªÖÊËØ£¬Í¨¹ýÍØÕ¹Å·¼¸ÀïºÎÀ´Ëã¡£
-// ¿ÉÒÔÓÐÐ§µÄ½µµÍaÓënµÄÔËËãÁ¿£¬±ÈÔÚn½Ï´óµÄÊ±ºò±È·ÑÂíÐ¡¶¨Àí¸üÓÐÐ§¡£
+// æ±‚è§£ä¹˜æ³•é€†å…ƒå‡½æ•° a * (return value) â‰¡ 1 (mod n)ã€‚
+// å‰ææ˜¯ä¸¤è€…äº’ä¸ºè´¨ç´ ï¼Œé€šè¿‡æ‹“å±•æ¬§å‡ é‡Œä½•æ¥ç®—ã€‚
+// å¯ä»¥æœ‰æ•ˆçš„é™ä½Žaä¸Žnçš„è¿ç®—é‡ï¼Œæ¯”åœ¨nè¾ƒå¤§çš„æ—¶å€™æ¯”è´¹é©¬å°å®šç†æ›´æœ‰æ•ˆã€‚
 static CryptInt CryptEgcdInverse(CryptInt a, CryptInt n)
 {
 	CryptInt x = 0, y = 0;
@@ -340,26 +340,26 @@ static CryptInt CryptEgcdInverse(CryptInt a, CryptInt n)
 	{
 		return 0;
 	}
-	// È·±£ÓàÊýÓë±»³ýÊý·ûºÅÒ»ÖÂ
-	// if (a < 0) y = -y; // ¸ºÊýÈ¡Ä£ÓÐÕý¸ºÄ££¬Ä¬ÈÏÎªÎÞ·ûºÅÈ¡Ä£¡£
-	// while (y > n) y -= n;// y %= n; // ÐÞÕýyÖµ»ØÄ£Óò¡£
-	if (y > n) y %= n; // ÐÞÕýyÖµ»ØÄ£Óò¡£
+	// ç¡®ä¿ä½™æ•°ä¸Žè¢«é™¤æ•°ç¬¦å·ä¸€è‡´
+	// if (a < 0) y = -y; // è´Ÿæ•°å–æ¨¡æœ‰æ­£è´Ÿæ¨¡ï¼Œé»˜è®¤ä¸ºæ— ç¬¦å·å–æ¨¡ã€‚
+	// while (y > n) y -= n;// y %= n; // ä¿®æ­£yå€¼å›žæ¨¡åŸŸã€‚
+	if (y > n) y %= n; // ä¿®æ­£yå€¼å›žæ¨¡åŸŸã€‚
 	if (y < 0) y += n;
 	return y;
 }
 
 #include <stdlib.h>
 
-//Éú³É[ 0 , n ]µÄËæ»úÊý
+//ç”Ÿæˆ[ 0 , n ]çš„éšæœºæ•°
 static CryptUint CryptRandom(CryptUint n)
 {
 	return (CryptUint) ((double) rand() / RAND_MAX * n + 0.5);
 }
 
-//miller_rabinËã·¨µÄÅÐ¶ÏÔªËØ
+//miller_rabinç®—æ³•çš„åˆ¤æ–­å…ƒç´ 
 static uint8_t CryptWitness(CryptUint a, CryptUint n)
 {
-	//ÓÃ¼ìÑéËã×ÓaÀ´¼ìÑénÊÇ²»ÊÇËØÊý
+	//ç”¨æ£€éªŒç®—å­aæ¥æ£€éªŒnæ˜¯ä¸æ˜¯ç´ æ•°
 	CryptUint tmp = n - 1;
 	uint8_t len = 0;
 
@@ -368,14 +368,14 @@ static uint8_t CryptWitness(CryptUint a, CryptUint n)
 		tmp /= 2, len++;
 	}
 
-	//½«n-1²ð·ÖÎªa^r * s
-	CryptUint x = CryptFastPowMod(a, tmp, n); //µÃµ½a^r mod n
-	//ÓàÊýÎª1ÔòÎªËØÊý
+	//å°†n-1æ‹†åˆ†ä¸ºa^r * s
+	CryptUint x = CryptFastPowMod(a, tmp, n); //å¾—åˆ°a^r mod n
+	//ä½™æ•°ä¸º1åˆ™ä¸ºç´ æ•°
 	if (x == 1 || x == n - 1)
 	{
 		return 1;
 	}
-	//·ñÔòÊÔÑéÌõ¼þ2¿´ÊÇ·ñÓÐÂú×ãµÄ j
+	//å¦åˆ™è¯•éªŒæ¡ä»¶2çœ‹æ˜¯å¦æœ‰æ»¡è¶³çš„ j
 	while (len--)
 	{
 		x = CryptFastMulMod(x, x, n);
@@ -387,7 +387,7 @@ static uint8_t CryptWitness(CryptUint a, CryptUint n)
 	return 0;
 }
 
-//¼ìÑénÊÇ·ñÊÇËØÊý
+//æ£€éªŒnæ˜¯å¦æ˜¯ç´ æ•°
 static uint8_t CryptMillerRabin(CryptUint n)
 {
 	if (n == 2)
@@ -395,18 +395,18 @@ static uint8_t CryptMillerRabin(CryptUint n)
 		return 1;
 	}
 
-	//Èç¹ûÊÇ2ÔòÊÇËØÊý£¬Èç¹û<2»òÕßÊÇ>2µÄÅ¼ÊýÔò²»ÊÇËØÊý
+	//å¦‚æžœæ˜¯2åˆ™æ˜¯ç´ æ•°ï¼Œå¦‚æžœ<2æˆ–è€…æ˜¯>2çš„å¶æ•°åˆ™ä¸æ˜¯ç´ æ•°
 	if (n < 2 || n % 2 == 0)
 	{
 		return 0;
 	}
 
-	//	×ötimes´ÎËæ»ú¼ìÑé
+	//	åštimesæ¬¡éšæœºæ£€éªŒ
 	for (uint8_t i = 1; i != 20; i++)
 	{
-		//µÃµ½Ëæ»ú¼ìÑéËã×Ó a
+		//å¾—åˆ°éšæœºæ£€éªŒç®—å­ a
 		CryptUint a = CryptRandom(n - 2) + 1;
-		//ÓÃa¼ìÑénÊÇ·ñÊÇËØÊý
+		//ç”¨aæ£€éªŒnæ˜¯å¦æ˜¯ç´ æ•°
 		if (!CryptWitness(a, n))
 		{
 			return 0;

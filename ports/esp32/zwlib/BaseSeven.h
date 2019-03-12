@@ -7,8 +7,8 @@ typedef unsigned int    uint32_t;
 
 enum BaseSeven
 {
-	BsEncodeLen = 7, // 编码单位
-	BsDecodeLen = 8, // 解码单位
+	BsEncodeLen = 7, // 缂栫爜鍗曚綅
+	BsDecodeLen = 8, // 瑙ｇ爜鍗曚綅
 };
 
 uint8_t BaseSevenEncode(uint8_t Buf[], uint32_t BufLen, uint8_t Src[], uint32_t SrcLen);

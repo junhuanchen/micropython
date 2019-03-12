@@ -10,22 +10,22 @@ RsaVar RsaCrypt(RsaVar Data, RsaVar Crypt, RsaVar Max)
 
 #include "stdio.h"
 
-// ³õÊ¼»¯RsaVarÄ£¿é£¬Éú³É¶Ô³ÆÃÜÔ¿£¬ÃÜÔ¿±äÁ¿ĞëÍâ²¿Ìá¹©¡£
+// åˆå§‹åŒ–RsaVaræ¨¡å—ï¼Œç”Ÿæˆå¯¹ç§°å¯†é’¥ï¼Œå¯†é’¥å˜é‡é¡»å¤–éƒ¨æä¾›ã€‚
 static void RsaCryptInit(RsaVar Max, RsaVar * Encrypt, RsaVar * Decrypt)
 {
-	// N Êı¾İ¹æÄ££¬ En = ¦Õ(N)£¨Å·À­º¯Êı½á¹û£©£¬ Encrypt Óë Decrypt ·Ö±ğÎªÁ½°ÑÃÜÔ¿
+	// N æ•°æ®è§„æ¨¡ï¼Œ En = Ï†(N)ï¼ˆæ¬§æ‹‰å‡½æ•°ç»“æœï¼‰ï¼Œ Encrypt ä¸ Decrypt åˆ†åˆ«ä¸ºä¸¤æŠŠå¯†é’¥
 	RsaVar N = Max, En = CryptEular(N);
 	if (*Encrypt < 2) *Encrypt = 2;
-	// Éú³É__RSA_H__²ÎÊı
+	// ç”Ÿæˆ__RSA_H__å‚æ•°
 	do
 	{
-		// Ñ¡È¡ Encrypt Óë En »¥ÖÊµÄÊı
+		// é€‰å– Encrypt ä¸ En äº’è´¨çš„æ•°
 		while (1 != CryptGcd(En, *Encrypt))
 			*Encrypt += 1;
-		// Çó½âÆä³Ë·¨ÄæÔª£¬Èô Decrypt == -1 Ôò±íÊ¾ En Óë Encrypt ²»»¥ÖÊ
+		// æ±‚è§£å…¶ä¹˜æ³•é€†å…ƒï¼Œè‹¥ Decrypt == -1 åˆ™è¡¨ç¤º En ä¸ Encrypt ä¸äº’è´¨
 		*Decrypt = CryptEgcdInverse(*Encrypt, En);
 	} while (-1 == *Decrypt);
-	// ´òÓ¡ÃÜÔ¿²ÎÊı
+	// æ‰“å°å¯†é’¥å‚æ•°
 	printf("En:%llu\n", En);
 	printf("Encrypt:%llu\n", *Encrypt);
 	printf("Decrypt:%llu\n", *Decrypt);
@@ -38,11 +38,11 @@ static void RsaCryptInit(RsaVar Max, RsaVar * Encrypt, RsaVar * Decrypt)
 
 int main()
 {
-	// N Êı¾İ¹æÄ££¬ En = ¦Õ(N)£¨Å·À­º¯Êı½á¹û£©£¬Encrypt Óë Decrypt ·Ö±ğÎªÁ½°ÑÃÜÔ¿
+	// N æ•°æ®è§„æ¨¡ï¼Œ En = Ï†(N)ï¼ˆæ¬§æ‹‰å‡½æ•°ç»“æœï¼‰ï¼ŒEncrypt ä¸ Decrypt åˆ†åˆ«ä¸ºä¸¤æŠŠå¯†é’¥
 	RsaVar N = UINT8_MAX, Encrypt = 7, Decrypt;
 	RsaCryptInit(N, &Encrypt, &Decrypt);
 
-	// ÈôÏİÈëËÀÑ­»·±ØÈ»ÊÇÒòÎªÃ»ÄÜ»¹Ô­»ØÔ­Êı¾İµ¼ÖÂÎŞ·¨½øÈëÏÂÒ»Ë÷Òı(++)£¬¿É×ÔĞĞ²âÊÔ´óÓÚNµÄÊı¾İ¹æÄ£
+	// è‹¥é™·å…¥æ­»å¾ªç¯å¿…ç„¶æ˜¯å› ä¸ºæ²¡èƒ½è¿˜åŸå›åŸæ•°æ®å¯¼è‡´æ— æ³•è¿›å…¥ä¸‹ä¸€ç´¢å¼•(++)ï¼Œå¯è‡ªè¡Œæµ‹è¯•å¤§äºNçš„æ•°æ®è§„æ¨¡
 	// Test Encrypt Key
 	RsaVar src, tmp;
 	for (src = 0; src != N; src++)

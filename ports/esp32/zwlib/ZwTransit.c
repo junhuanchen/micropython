@@ -6,7 +6,7 @@ void ZwTranInit(void)
 }
 
 #include "Rsa.h"
-#define		CIPHER_MAX		0xFF // ÃÜÎÄÔ­Ê¼Êı¾İ³¤¶È
+#define		CIPHER_MAX		0xFF // å¯†æ–‡åŸå§‹æ•°æ®é•¿åº¦
 
 static void ZwTranCrypt(uint8_t String[], uint8_t Crypt)
 {
@@ -29,27 +29,27 @@ static void ZwTranSetCheck(uint8_t Buf[], uint8_t Len)
 	Buf[Len] = ZwTranCheck(Buf, Len);
 }
 
-// ³õÊ¼»¯±àÂë°ü²¢¸³Öµ¾²Ì¬Êı¾İ¡£
+// åˆå§‹åŒ–ç¼–ç åŒ…å¹¶èµ‹å€¼é™æ€æ•°æ®ã€‚
 void ZwEncodeInit(ZwEncode * Self, uint8_t Crypt, uint8_t EntID, uint8_t DevID[], uint8_t DevIP, ExternGetTime Time)
 {
-	// ³õÊ¼»¯ÎªÁã
+	// åˆå§‹åŒ–ä¸ºé›¶
 	memset(Self, '\0', sizeof(*Self));
-	// ±àÂëÇø¾²Ì¬Êı¾İ
+	// ç¼–ç åŒºé™æ€æ•°æ®
 	memcpy(Self->Zip.EntID, &EntID, sizeof(Self->Zip.EntID));
 	memcpy(Self->Zip.DevID, DevID, sizeof(Self->Zip.DevID));
 	memcpy(Self->Zip.DevIP, &DevIP, sizeof(Self->Zip.DevIP));
-	// º¯ÊıÒÔ¼°Ïà¹ØÊı¾İ½Ó¿Ú
+	// å‡½æ•°ä»¥åŠç›¸å…³æ•°æ®æ¥å£
 	Self->Time = Time;
 	Self->Crypt = Crypt;
 }
 
 static void ZwEncodeCore(ZwEncode * Self, ZwEncodeType Type, uint8_t Pack[])
 {
-	// ÉèÖÃÊı¾İ°üÀàĞÍ
+	// è®¾ç½®æ•°æ®åŒ…ç±»å‹
 	Pack[0] = Type;
-	// »ñÈ¡Ê±¼äÖµ²¢ÉèÖÃµ½¶ş½øÖÆ±àÂëÇø
+	// è·å–æ—¶é—´å€¼å¹¶è®¾ç½®åˆ°äºŒè¿›åˆ¶ç¼–ç åŒº
 	Self->Time((uint32_t *) Self->Zip.DevTm, (uint16_t *) Self->Zip.DevMs);
-	// ¶Ô¶ş½øÖÆÊı¾İ½øĞĞ±àÂë
+	// å¯¹äºŒè¿›åˆ¶æ•°æ®è¿›è¡Œç¼–ç 
 	BaseSevenEncode(Pack + sizeof(Type), ZwBinaryLen, (uint8_t *)&Self->Zip, sizeof(Self->Zip));
 }
 
@@ -57,12 +57,12 @@ bool ZwEncodeGetDevIP(uint8_t Pack[], uint8_t PackLen, uint8_t *DevIP)
 {
 	if (((PackLen < ZwTranMax) && (0 == ZwTranCheck(Pack, PackLen))))
 	{
-		// ½âÂë²¿·ÖºËĞÄÊı¾İ
+		// è§£ç éƒ¨åˆ†æ ¸å¿ƒæ•°æ®
 		uint8_t tmp[BsDecodeLen];
-		// ¸ù¾İ½á¹¹£¬Éè±¸IPÔÚ±àÂëÇøµÚÒ»²¿·Ö¡£
+		// æ ¹æ®ç»“æ„ï¼Œè®¾å¤‡IPåœ¨ç¼–ç åŒºç¬¬ä¸€éƒ¨åˆ†ã€‚
 		if (BaseSevenDecode(Pack + ZwTranTypeLen, BsDecodeLen, tmp, sizeof(tmp)))
 		{
-			// »ñµÃDevIPÊı¾İ
+			// è·å¾—DevIPæ•°æ®
 			memcpy(DevIP, tmp, sizeof(*DevIP));
 			return true;
 		}
@@ -74,17 +74,17 @@ bool ZwEncodeSetDevIP(uint8_t Pack[], uint8_t PackLen, uint8_t DevIP)
 {
 	if (((PackLen < ZwTranMax) && (0 == ZwTranCheck(Pack, PackLen))))
 	{
-		// ±àÂë»º³åÇø
+		// ç¼–ç ç¼“å†²åŒº
 		uint8_t tmp[BsEncodeLen];
-		// ¸ù¾İĞ­Òé£¬Êı¾İIPÔÚ±àÂëÇøµÚÒ»²¿·Ö£¬Êı¾İ½âÂë¡£
+		// æ ¹æ®åè®®ï¼Œæ•°æ®IPåœ¨ç¼–ç åŒºç¬¬ä¸€éƒ¨åˆ†ï¼Œæ•°æ®è§£ç ã€‚
 		if (BaseSevenDecode(Pack + ZwTranTypeLen, BsDecodeLen, tmp, sizeof(tmp)))
 		{
-			// ĞŞ¸ÄDevIPÊı¾İ
+			// ä¿®æ”¹DevIPæ•°æ®
 			memcpy(tmp, &DevIP, sizeof(DevIP));
-			// ÖØĞÂĞ´Èë±àÂëÊı¾İ
+			// é‡æ–°å†™å…¥ç¼–ç æ•°æ®
 			if (BaseSevenEncode(Pack + ZwTranTypeLen, BsDecodeLen, tmp, sizeof(tmp)))
 			{
-				// ÖØĞÂÉèÖÃ°üÎ²µÄĞ£ÑéÂë
+				// é‡æ–°è®¾ç½®åŒ…å°¾çš„æ ¡éªŒç 
 				ZwTranSetCheck(Pack, PackLen - ZwTranCrcLen);
 				return true;
 			}
@@ -98,16 +98,16 @@ uint8_t ZwEncodeCollect(ZwEncode * Self, uint8_t Pack[], uint8_t SrcLen, uint8_t
 	uint8_t pack_len = (ZwEncodeCoreLen + sizeof(SrcLen) + sizeof(DataLen)) + SrcLen + DataLen - 1;
 	if (pack_len < ZwTranMax && DataLen <= ZwDataMax)
 	{
-		// ±àÂëºËĞÄÊı¾İ
+		// ç¼–ç æ ¸å¿ƒæ•°æ®
 		ZwEncodeCore(Self, ZwTranTypeCollect, Pack);
-		// ¼ÓÃÜ·â°üÊı¾İ
+		// åŠ å¯†å°åŒ…æ•°æ®
 		uint8_t * pack = Pack + ZwTranTypeLen + ZwBinaryLen;
 		*pack = SrcLen, pack += sizeof(SrcLen);
 		memcpy(pack, Src, SrcLen), pack += SrcLen;
 		*pack = DataLen, pack += sizeof(DataLen);
 		memcpy(pack, Data, DataLen), pack[DataLen] = '\0';
 		ZwTranCrypt(Pack + ZwTranTypeLen + ZwBinaryLen, Self->Crypt);
-		// ¼ÆËãµ±Ç°Êı¾İĞ£ÑéÂë²¢Ìí¼ÓÔÚÄ©Î»
+		// è®¡ç®—å½“å‰æ•°æ®æ ¡éªŒç å¹¶æ·»åŠ åœ¨æœ«ä½
 		ZwTranSetCheck(Pack, pack_len - ZwTranCrcLen);
 		Pack[pack_len] = '\0';
 		return pack_len;
@@ -120,14 +120,14 @@ uint8_t ZwEncodeCommand(ZwEncode * Self, uint8_t Pack[], uint8_t CmdLen, uint8_t
 	uint8_t pack_len = ZwEncodeCoreLen + sizeof(CmdLen) + CmdLen - 1;
 	if (pack_len < ZwTranMax)
 	{
-		// ±àÂëºËĞÄÊı¾İ
+		// ç¼–ç æ ¸å¿ƒæ•°æ®
 		ZwEncodeCore(Self, ZwTranTypeCommand, Pack);
-		// ¼ÓÃÜ·â°üÊı¾İ
+		// åŠ å¯†å°åŒ…æ•°æ®
 		uint8_t * pack = Pack + ZwTranTypeLen + ZwBinaryLen;
 		*pack = CmdLen, pack += sizeof(CmdLen);
 		memcpy(pack, Cmd, CmdLen), pack[CmdLen] = '\0';
 		ZwTranCrypt(Pack + ZwTranTypeLen + ZwBinaryLen, Self->Crypt);
-		// ¼ÆËãµ±Ç°Êı¾İĞ£ÑéÂë²¢Ìí¼ÓÔÚÄ©Î»
+		// è®¡ç®—å½“å‰æ•°æ®æ ¡éªŒç å¹¶æ·»åŠ åœ¨æœ«ä½
 		ZwTranSetCheck(Pack, pack_len - ZwTranCrcLen);
 		Pack[pack_len] = '\0';
 		return pack_len;
@@ -135,21 +135,21 @@ uint8_t ZwEncodeCommand(ZwEncode * Self, uint8_t Pack[], uint8_t CmdLen, uint8_t
 	return 0;
 }
 
-// ³õÊ¼»¯½â°ü²Ù×÷ËùĞè½á¹¹
+// åˆå§‹åŒ–è§£åŒ…æ“ä½œæ‰€éœ€ç»“æ„
 void ZwDecodeInit(ZwDecode *Self, uint8_t Crypt)
 {
 	memset(Self, '\0', sizeof(*Self));
 	Self->Crypt = Crypt;
 }
 
-// Êı¾İĞ£Ñé¡¢½âÂë¡¢½âÃÜ¿ò¼Ü£¬·µ»ØCryptÇøË÷Òı¡£
+// æ•°æ®æ ¡éªŒã€è§£ç ã€è§£å¯†æ¡†æ¶ï¼Œè¿”å›CryptåŒºç´¢å¼•ã€‚
 uint8_t* ZwDecodeCore(ZwDecode * Self, uint8_t *Pack, uint8_t PackLen)
 {
 	if (PackLen < ZwTranMax)
 	{
 		if (0 == ZwTranCheck(Pack, PackLen))
 		{
-			Pack[PackLen - 1] = '\0'; // ÒÆ³ıĞ£ÑéÂë
+			Pack[PackLen - 1] = '\0'; // ç§»é™¤æ ¡éªŒç 
 			if (BaseSevenDecode(Pack + ZwTranTypeLen, ZwBinaryLen, (uint8_t *)&Self->Zip, sizeof(Self->Zip)))
 			{
 				Pack += ZwTranTypeLen + ZwBinaryLen;
@@ -158,27 +158,27 @@ uint8_t* ZwDecodeCore(ZwDecode * Self, uint8_t *Pack, uint8_t PackLen)
 			}
 			else
 			{
-				// LogOut:±àÂëÇøÊı¾İÒì³£¡£
-				PutInfo("UnPackCoreCheck : ±àÂëÇøÊı¾İÒì³£\n");
+				// LogOut:ç¼–ç åŒºæ•°æ®å¼‚å¸¸ã€‚
+				PutInfo("UnPackCoreCheck : ç¼–ç åŒºæ•°æ®å¼‚å¸¸\n");
 			}
 		}
 		else
 		{
-			// LogOut:Ğ£ÑéÖµÊı¾İÒì³£¡£
-			PutInfo("UnPackCoreCheck : Ğ£ÑéÖµÊı¾İÒì³£\n");
+			// LogOut:æ ¡éªŒå€¼æ•°æ®å¼‚å¸¸ã€‚
+			PutInfo("UnPackCoreCheck : æ ¡éªŒå€¼æ•°æ®å¼‚å¸¸\n");
 		}
 	}
 	else
 	{
-		// LogOut:Êı¾İ³¬¹ı»º³åÇø¡£
-		PutInfo("UnPackCoreCheck : Êı¾İ³¬¹ı»º³åÇø\n");
+		// LogOut:æ•°æ®è¶…è¿‡ç¼“å†²åŒºã€‚
+		PutInfo("UnPackCoreCheck : æ•°æ®è¶…è¿‡ç¼“å†²åŒº\n");
 	}
 	return NULL;
 }
 
 bool ZwDecodeCollect(uint8_t String[], uint8_t *SrcLen, uint8_t Src[], uint8_t *DataLen, uint8_t Data[])
 {
-	// È¡³öCryptÇøÊı¾İ
+	// å–å‡ºCryptåŒºæ•°æ®
 	if (String[0] <= ZwSourceMax)
 	{
 		*SrcLen = String[0];
@@ -227,7 +227,7 @@ void UnitTestZwTransit()
 	time_t NTimeTm, LTimeTm;
 	uint16_t NTimeMs, LTimeMs;
 
-	// ÒÔÏÂ²âÊÔÖ¸Áî°ü
+	// ä»¥ä¸‹æµ‹è¯•æŒ‡ä»¤åŒ…
 
 	uint8_t buffer[ZwTranMax], buflen, *String;
 
@@ -252,14 +252,14 @@ void UnitTestZwTransit()
 	NTimeMs = *(uint32_t *) De.Zip.DevMs;
 	assert(NTimeTm == LTimeTm && NTimeMs == LTimeMs);
 
-	// ÒÔÏÂ²âÊÔ²É¼¯°ü
+	// ä»¥ä¸‹æµ‹è¯•é‡‡é›†åŒ…
 	uint8_t pack_len = ZwEncodeCollect(&En, buffer, 8, "DM000000", 20, "12345123451234512345");
-	assert(pack_len == strlen(buffer)); // ÒâÎ¶×ÅÕâÊÇÒ»¸ö×Ö·û´®
+	assert(pack_len == strlen(buffer)); // æ„å‘³ç€è¿™æ˜¯ä¸€ä¸ªå­—ç¬¦ä¸²
 
 	LTimeTm = *(uint32_t *) En.Zip.DevTm;
 	LTimeMs = *(uint32_t *) En.Zip.DevMs;
 
-	// Î´½â°üÊ±ÉèÖÃºÍ»ñÈ¡Éè±¸µØÖ·
+	// æœªè§£åŒ…æ—¶è®¾ç½®å’Œè·å–è®¾å¤‡åœ°å€
 	uint8_t DevIP;
 	ZwEncodeGetDevIP(buffer, pack_len, &DevIP);
 	assert(DevIP == 21);
@@ -270,7 +270,7 @@ void UnitTestZwTransit()
 	uint8_t Src[8] = "DM000000", SrcLen = 8;
 	uint8_t Data[20], DataLen;
 
-	// ½â°üÊ±»ñÈ¡ËùÓĞÊı¾İ
+	// è§£åŒ…æ—¶è·å–æ‰€æœ‰æ•°æ®
 	String = ZwDecodeCore(&De, buffer, pack_len);
 	assert(NULL != String);
 
