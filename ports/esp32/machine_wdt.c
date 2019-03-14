@@ -42,15 +42,17 @@ typedef struct _machine_wdt_obj_t {
 STATIC machine_wdt_obj_t wdt_default = {{&machine_wdt_type}};
 
 STATIC mp_obj_t machine_wdt_make_new(const mp_obj_type_t *type_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
-    mp_arg_check_num(n_args, n_kw, 0, 1, false);
+    mp_arg_check_num(n_args, n_kw, 0, 2, false);
 
-    mp_int_t id = 0;
+    mp_int_t id = 0, timeout = 5;
     if (n_args > 0) {
         id = mp_obj_get_int(args[0]);
+        timeout = mp_obj_get_int(args[1]);
     }
-
+    
     switch (id) {
         case 0:
+            esp_task_wdt_init(timeout, true);
             esp_task_wdt_add(NULL);
             return &wdt_default;
         default:
@@ -65,8 +67,23 @@ STATIC mp_obj_t machine_wdt_feed(mp_obj_t self_in) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(machine_wdt_feed_obj, machine_wdt_feed);
 
+STATIC mp_obj_t machine_wdt_status(mp_obj_t self_in) {
+    (void)self_in;
+    return MP_OBJ_NEW_SMALL_INT(esp_task_wdt_status(NULL));
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(machine_wdt_status_obj, machine_wdt_status);
+
+STATIC mp_obj_t machine_wdt_delete(mp_obj_t self_in) {
+    (void)self_in;
+    esp_task_wdt_delete(NULL);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(machine_wdt_delete_obj, machine_wdt_delete);
+
 STATIC const mp_rom_map_elem_t machine_wdt_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_feed), MP_ROM_PTR(&machine_wdt_feed_obj) },
+    { MP_ROM_QSTR(MP_QSTR_status), MP_ROM_PTR(&machine_wdt_status_obj) },
+    { MP_ROM_QSTR(MP_QSTR_delete), MP_ROM_PTR(&machine_wdt_delete_obj) },
 };
 STATIC MP_DEFINE_CONST_DICT(machine_wdt_locals_dict, machine_wdt_locals_dict_table);
 
