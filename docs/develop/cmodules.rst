@@ -71,10 +71,8 @@ Directory::
     #include "py/runtime.h"
     #include "py/builtin.h"
 
-    #define MODULE_EXAMPLE_ENABLED (1)
-
     // This is the function which will be called from Python as example.add_ints(a, b).
-    STATIC mp_obj_t example_add_ints(mp_obj_t a_obj, mp_obj_tab_obj) {
+    STATIC mp_obj_t example_add_ints(mp_obj_t a_obj, mp_obj_t b_obj) {
         // Extract the ints from the micropython input objects
         int a = mp_obj_get_int(a_obj);
         int b = mp_obj_get_int(b_obj);
@@ -83,7 +81,7 @@ Directory::
         return mp_obj_new_int(a + b);
     }
     // Define a Python reference to the function above
-    STATIC MP_DEFINE_CONST_FUN_OBJ_1(example_add_ints_obj, example_add_ints);
+    STATIC MP_DEFINE_CONST_FUN_OBJ_2(example_add_ints_obj, example_add_ints);
 
     // Define all properties of the example module.
     // Table entries are key/value pairs of the attribute name (a string)
@@ -119,6 +117,19 @@ Directory::
     # This is not actually needed in this example.
     CFLAGS_USERMOD += -I$(EXAMPLE_MOD_DIR)
 
+Finally you will need to define ``MODULE_EXAMPLE_ENABLED`` to 1. This
+can be done by adding ``CFLAGS_EXTRA=-DMODULE_EXAMPLE_ENABLED=1`` to
+the ``make`` command, or editing ``mpconfigport.h`` or
+``mpconfigboard.h`` to add
+
+.. code-block:: c
+
+    #define MODULE_EXAMPLE_ENABLED (1)
+
+Note that the exact method depends on the port as they have different
+structures. If not done correctly it will compile but importing will
+fail to find the module.
+
 
 Compiling the cmodule into MicroPython
 --------------------------------------
@@ -146,7 +157,7 @@ Building for stm32 port:
 .. code-block:: bash
 
     cd my_project/micropython/ports/stm32
-    make USER_C_MODULES=../../../modules all
+    make USER_C_MODULES=../../../modules CFLAGS_EXTRA=-DMODULE_EXAMPLE_ENABLED=1 all
 
 
 Module usage in MicroPython

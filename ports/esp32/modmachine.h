@@ -20,6 +20,7 @@ extern const mp_obj_type_t machine_hw_spi_type;
 extern const mp_obj_type_t machine_i2s_type;
 extern const mp_obj_type_t machine_uart_type;
 extern const mp_obj_type_t machine_rtc_type;
+extern const mp_obj_type_t machine_sdcard_type;
 
 void machine_pins_init(void);
 void machine_pins_deinit(void);

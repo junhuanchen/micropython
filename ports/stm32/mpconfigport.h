@@ -145,7 +145,8 @@
 #define MICROPY_PY_USELECT          (1)
 #define MICROPY_PY_UTIMEQ           (1)
 #define MICROPY_PY_UTIME_MP_HAL     (1)
-#define MICROPY_PY_OS_DUPTERM       (1)
+#define MICROPY_PY_OS_DUPTERM       (3)
+#define MICROPY_PY_UOS_DUPTERM_BUILTIN_STREAM (1)
 #define MICROPY_PY_MACHINE          (1)
 #define MICROPY_PY_MACHINE_PULSE    (1)
 #define MICROPY_PY_MACHINE_PIN_MAKE_NEW mp_pin_make_new
@@ -223,6 +224,12 @@ extern const struct _mp_obj_module_t mp_module_onewire;
 #define SOCKET_BUILTIN_MODULE_WEAK_LINKS
 #endif
 
+#if MICROPY_PY_USSL
+#define SSL_BUILTIN_MODULE_WEAK_LINKS       { MP_ROM_QSTR(MP_QSTR_ssl), MP_ROM_PTR(&mp_module_ussl) },
+#else
+#define SSL_BUILTIN_MODULE_WEAK_LINKS
+#endif
+
 #if MICROPY_PY_NETWORK
 #define NETWORK_BUILTIN_MODULE              { MP_ROM_QSTR(MP_QSTR_network), MP_ROM_PTR(&mp_module_network) },
 #else
@@ -253,6 +260,7 @@ extern const struct _mp_obj_module_t mp_module_onewire;
     { MP_ROM_QSTR(MP_QSTR_time), MP_ROM_PTR(&mp_module_utime) }, \
     { MP_ROM_QSTR(MP_QSTR_select), MP_ROM_PTR(&mp_module_uselect) }, \
     SOCKET_BUILTIN_MODULE_WEAK_LINKS \
+    SSL_BUILTIN_MODULE_WEAK_LINKS \
     { MP_ROM_QSTR(MP_QSTR_struct), MP_ROM_PTR(&mp_module_ustruct) }, \
     { MP_ROM_QSTR(MP_QSTR_machine), MP_ROM_PTR(&machine_module) }, \
     { MP_ROM_QSTR(MP_QSTR_errno), MP_ROM_PTR(&mp_module_uerrno) }, \
@@ -265,6 +273,12 @@ extern const struct _mp_obj_module_t mp_module_onewire;
     STM_BUILTIN_MODULE \
 
 #define MP_STATE_PORT MP_STATE_VM
+
+#if MICROPY_SSL_MBEDTLS
+#define MICROPY_PORT_ROOT_POINTER_MBEDTLS void **mbedtls_memory;
+#else
+#define MICROPY_PORT_ROOT_POINTER_MBEDTLS
+#endif
 
 #define MICROPY_PORT_ROOT_POINTERS \
     const char *readline_hist[8]; \
@@ -290,10 +304,12 @@ extern const struct _mp_obj_module_t mp_module_onewire;
     struct _pyb_uart_obj_t *pyb_uart_obj_all[MICROPY_HW_MAX_UART]; \
     \
     /* pointers to all CAN objects (if they have been created) */ \
-    struct _pyb_can_obj_t *pyb_can_obj_all[2]; \
+    struct _pyb_can_obj_t *pyb_can_obj_all[MICROPY_HW_MAX_CAN]; \
     \
     /* list of registered NICs */ \
     mp_obj_list_t mod_network_nic_list; \
+    \
+    MICROPY_PORT_ROOT_POINTER_MBEDTLS
 
 // type definitions for the specific machine
 
@@ -364,14 +380,6 @@ static inline mp_uint_t disable_irq(void) {
 
 // We need an implementation of the log2 function which is not a macro
 #define MP_NEED_LOG2 (1)
-
-// There is no classical C heap in bare-metal ports, only Python
-// garbage-collected heap. For completeness, emulate C heap via
-// GC heap. Note that MicroPython core never uses malloc() and friends,
-// so these defines are mostly to help extension module writers.
-#define malloc(n) m_malloc(n)
-#define free(p) m_free(p)
-#define realloc(p, n) m_realloc(p, n)
 
 // We need to provide a declaration/definition of alloca()
 #include <alloca.h>

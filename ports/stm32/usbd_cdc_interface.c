@@ -64,21 +64,16 @@ static uint8_t usbd_cdc_connect_tx_timer;
 uint8_t *usbd_cdc_init(usbd_cdc_state_t *cdc_in) {
     usbd_cdc_itf_t *cdc = (usbd_cdc_itf_t*)cdc_in;
 
-    // Reset all the CDC state
-    // Note: we don't reset tx_buf_ptr_in in order to allow the output buffer to
-    // be filled (by usbd_cdc_tx_always) before the USB device is connected.
+    // Reset the CDC state due to a new USB host connection
+    // Note: we don't reset tx_buf_ptr_* in order to allow the output buffer to
+    // be filled (by usbd_cdc_tx_always) before the USB device is connected, and
+    // to retain transmit buffer state across multiple USB connections (they will
+    // be 0 at MCU reset since the variables live in the BSS).
     cdc->rx_buf_put = 0;
     cdc->rx_buf_get = 0;
     cdc->rx_buf_full = false;
-    cdc->tx_buf_ptr_out = 0;
-    cdc->tx_buf_ptr_out_shadow = 0;
     cdc->tx_need_empty_packet = 0;
     cdc->connect_state = USBD_CDC_CONNECT_STATE_DISCONNECTED;
-    #if MICROPY_HW_USB_ENABLE_CDC2
-    cdc->attached_to_repl = &cdc->base == cdc->base.usbd->cdc;
-    #else
-    cdc->attached_to_repl = 1;
-    #endif
 
     // Return the buffer to place the first USB OUT packet
     return cdc->rx_packet_buf;
@@ -222,18 +217,13 @@ void HAL_PCD_SOFCallback(PCD_HandleTypeDef *hpcd) {
     } else {
         usbd_cdc_msc_hid_state_t *usbd = ((USBD_HandleTypeDef*)hpcd->pData)->pClassData;
         hpcd->Instance->GINTMSK &= ~USB_OTG_GINTMSK_SOFM;
-        usbd_cdc_itf_t *cdc = (usbd_cdc_itf_t*)usbd->cdc;
-        if (cdc->connect_state == USBD_CDC_CONNECT_STATE_CONNECTING) {
-            cdc->connect_state = USBD_CDC_CONNECT_STATE_CONNECTED;
-            usbd_cdc_try_tx(cdc);
+        for (int i = 0; i < MICROPY_HW_USB_CDC_NUM; ++i) {
+            usbd_cdc_itf_t *cdc = (usbd_cdc_itf_t*)usbd->cdc[i];
+            if (cdc->connect_state == USBD_CDC_CONNECT_STATE_CONNECTING) {
+                cdc->connect_state = USBD_CDC_CONNECT_STATE_CONNECTED;
+                usbd_cdc_try_tx(cdc);
+            }
         }
-        #if MICROPY_HW_USB_ENABLE_CDC2
-        cdc = (usbd_cdc_itf_t*)usbd->cdc2;
-        if (cdc->connect_state == USBD_CDC_CONNECT_STATE_CONNECTING) {
-            cdc->connect_state = USBD_CDC_CONNECT_STATE_CONNECTED;
-            usbd_cdc_try_tx(cdc);
-        }
-        #endif
     }
 }
 

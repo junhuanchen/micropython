@@ -136,20 +136,6 @@ typedef enum {
     VTYPE_BUILTIN_CAST = 0x70 | MP_NATIVE_TYPE_OBJ,
 } vtype_kind_t;
 
-int mp_native_type_from_qstr(qstr qst) {
-    switch (qst) {
-        case MP_QSTR_object: return MP_NATIVE_TYPE_OBJ;
-        case MP_QSTR_bool: return MP_NATIVE_TYPE_BOOL;
-        case MP_QSTR_int: return MP_NATIVE_TYPE_INT;
-        case MP_QSTR_uint: return MP_NATIVE_TYPE_UINT;
-        case MP_QSTR_ptr: return MP_NATIVE_TYPE_PTR;
-        case MP_QSTR_ptr8: return MP_NATIVE_TYPE_PTR8;
-        case MP_QSTR_ptr16: return MP_NATIVE_TYPE_PTR16;
-        case MP_QSTR_ptr32: return MP_NATIVE_TYPE_PTR32;
-        default: return -1;
-    }
-}
-
 STATIC qstr vtype_to_qstr(vtype_kind_t vtype) {
     switch (vtype) {
         case VTYPE_PYOBJ: return MP_QSTR_object;
@@ -623,8 +609,11 @@ STATIC void emit_native_end_pass(emit_t *emit) {
             const_table_alloc += nqstr;
         }
         emit->const_table = m_new(mp_uint_t, const_table_alloc);
+        #if !MICROPY_DYNAMIC_COMPILER
         // Store mp_fun_table pointer just after qstrs
+        // (but in dynamic-compiler mode eliminate dependency on mp_fun_table)
         emit->const_table[nqstr] = (mp_uint_t)(uintptr_t)mp_fun_table;
+        #endif
 
         #if MICROPY_PERSISTENT_CODE_SAVE
         size_t qstr_link_alloc = emit->qstr_link_cur;
@@ -1370,7 +1359,7 @@ STATIC void emit_native_load_global(emit_t *emit, qstr qst, int kind) {
         if (emit->do_viper_types) {
             // check for builtin casting operators
             int native_type = mp_native_type_from_qstr(qst);
-            if (native_type >= MP_NATIVE_TYPE_INT) {
+            if (native_type >= MP_NATIVE_TYPE_BOOL) {
                 emit_post_push_imm(emit, VTYPE_BUILTIN_CAST, native_type);
                 return;
             }
@@ -2241,17 +2230,16 @@ STATIC void emit_native_binary_op(emit_t *emit, mp_binary_op_t op) {
         int reg_rhs = REG_ARG_3;
         emit_pre_pop_reg_flexible(emit, &vtype_rhs, &reg_rhs, REG_RET, REG_ARG_2);
         emit_pre_pop_reg(emit, &vtype_lhs, REG_ARG_2);
-        if (0) {
-            // dummy
         #if !(N_X64 || N_X86)
-        } else if (op == MP_BINARY_OP_LSHIFT) {
+        if (op == MP_BINARY_OP_LSHIFT) {
             ASM_LSL_REG_REG(emit->as, REG_ARG_2, reg_rhs);
             emit_post_push_reg(emit, VTYPE_INT, REG_ARG_2);
         } else if (op == MP_BINARY_OP_RSHIFT) {
             ASM_ASR_REG_REG(emit->as, REG_ARG_2, reg_rhs);
             emit_post_push_reg(emit, VTYPE_INT, REG_ARG_2);
+        } else
         #endif
-        } else if (op == MP_BINARY_OP_OR) {
+        if (op == MP_BINARY_OP_OR) {
             ASM_OR_REG_REG(emit->as, REG_ARG_2, reg_rhs);
             emit_post_push_reg(emit, VTYPE_INT, REG_ARG_2);
         } else if (op == MP_BINARY_OP_XOR) {
@@ -2741,6 +2729,11 @@ STATIC void emit_native_end_except_handler(emit_t *emit) {
 }
 
 const emit_method_table_t EXPORT_FUN(method_table) = {
+    #if MICROPY_DYNAMIC_COMPILER
+    EXPORT_FUN(new),
+    EXPORT_FUN(free),
+    #endif
+
     emit_native_start_pass,
     emit_native_end_pass,
     emit_native_last_emit_was_return_value,

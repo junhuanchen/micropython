@@ -4,7 +4,7 @@
 #
 # The MIT License (MIT)
 #
-# Copyright (c) 2016 Damien P. George
+# Copyright (c) 2016-2019 Damien P. George
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -75,9 +75,9 @@ for n in qstrutil.static_qstr_list:
     global_qstrs.append(QStrType(n))
 
 class QStrWindow:
-    def __init__(self, size_log2):
+    def __init__(self, size):
         self.window = []
-        self.size = 1 << size_log2
+        self.size = size
 
     def push(self, val):
         self.window = [val] + self.window[:self.size - 1]
@@ -259,7 +259,7 @@ def extract_prelude(bytecode, ip):
 class MPFunTable:
     pass
 
-class RawCode:
+class RawCode(object):
     # a set of all escaped names, to make sure they are unique
     escaped_names = set()
 
@@ -423,7 +423,7 @@ class RawCode:
 
 class RawCodeBytecode(RawCode):
     def __init__(self, bytecode, qstrs, objs, raw_codes):
-        super().__init__(MP_CODE_BYTECODE, bytecode, 0, qstrs, objs, raw_codes)
+        super(RawCodeBytecode, self).__init__(MP_CODE_BYTECODE, bytecode, 0, qstrs, objs, raw_codes)
 
     def freeze(self, parent_name):
         self.freeze_children(parent_name)
@@ -462,7 +462,7 @@ class RawCodeBytecode(RawCode):
 
 class RawCodeNative(RawCode):
     def __init__(self, code_kind, fun_data, prelude_offset, prelude, qstr_links, qstrs, objs, raw_codes, type_sig):
-        super().__init__(code_kind, fun_data, prelude_offset, qstrs, objs, raw_codes)
+        super(RawCodeNative, self).__init__(code_kind, fun_data, prelude_offset, qstrs, objs, raw_codes)
         self.prelude = prelude
         self.qstr_links = qstr_links
         self.type_sig = type_sig
@@ -479,18 +479,27 @@ class RawCodeNative(RawCode):
 
     def _link_qstr(self, pc, kind, qst):
         if kind == 0:
+            # Generic 16-bit link
             print('    %s & 0xff, %s >> 8,' % (qst, qst))
+            return 2
         else:
-            if kind == 2:
+            # Architecture-specific link
+            is_obj = kind == 2
+            if is_obj:
                 qst = '((uintptr_t)MP_OBJ_NEW_QSTR(%s))' % qst
             if config.native_arch in (MP_NATIVE_ARCH_X86, MP_NATIVE_ARCH_X64):
                 print('    %s & 0xff, %s >> 8, 0, 0,' % (qst, qst))
+                return 4
             elif MP_NATIVE_ARCH_ARMV6M <= config.native_arch <= MP_NATIVE_ARCH_ARMV7EMDP:
                 if is_obj:
-                    self._asm_thumb_rewrite_mov(i, qst)
-                    self._asm_thumb_rewrite_mov(i + 4, '(%s >> 16)' % qst)
+                    # qstr object, movw and movt
+                    self._asm_thumb_rewrite_mov(pc, qst)
+                    self._asm_thumb_rewrite_mov(pc + 4, '(%s >> 16)' % qst)
+                    return 8
                 else:
-                    self._asm_thumb_rewrite_mov(i, qst)
+                    # qstr number, movw instruction
+                    self._asm_thumb_rewrite_mov(pc, qst)
+                    return 4
             else:
                 assert 0
 
@@ -518,8 +527,7 @@ class RawCodeNative(RawCode):
                 # link qstr
                 qi_off, qi_kind, qi_val = self.qstr_links[qi]
                 qst = global_qstrs[qi_val].qstr_id
-                self._link_qstr(i, qi_kind, qst)
-                i += 4
+                i += self._link_qstr(i, qi_kind, qst)
                 qi += 1
             else:
                 # copy machine code (max 16 bytes)
@@ -633,7 +641,6 @@ def read_qstr_and_pack(f, bytecode, qstr_win):
     bytecode.append(qst >> 8)
 
 def read_bytecode(file, bytecode, qstr_win):
-    QSTR_LAST_STATIC = len(qstrutil.static_qstr_list)
     while not bytecode.is_full():
         op = read_byte(file, bytecode)
         f, sz = mp_opcode_format(bytecode.buf, bytecode.idx - 1, False)
@@ -664,7 +671,7 @@ def read_raw_code(f, qstr_win):
             # load qstr link table
             n_qstr_link = read_uint(f)
             for _ in range(n_qstr_link):
-                off = read_uint(f, qstr_win)
+                off = read_uint(f)
                 qst = read_qstr(f, qstr_win)
                 qstr_links.append((off >> 2, off & 3, qst))
 
@@ -715,7 +722,12 @@ def read_mpy(filename):
         qw_size = read_uint(f)
         config.MICROPY_OPT_CACHE_MAP_LOOKUP_IN_BYTECODE = (feature_byte & 1) != 0
         config.MICROPY_PY_BUILTINS_STR_UNICODE = (feature_byte & 2) != 0
-        config.native_arch = feature_byte >> 2
+        mpy_native_arch = feature_byte >> 2
+        if mpy_native_arch != MP_NATIVE_ARCH_NONE:
+            if config.native_arch == MP_NATIVE_ARCH_NONE:
+                config.native_arch = mpy_native_arch
+            elif config.native_arch != mpy_native_arch:
+                raise Exception('native architecture mismatch')
         config.mp_small_int_bits = header[3]
         qstr_win = QStrWindow(qw_size)
         return read_raw_code(f, qstr_win)
@@ -839,6 +851,7 @@ def main():
         'mpz':config.MICROPY_LONGINT_IMPL_MPZ,
     }[args.mlongint_impl]
     config.MPZ_DIG_SIZE = args.mmpz_dig_size
+    config.native_arch = MP_NATIVE_ARCH_NONE
 
     # set config values for qstrs, and get the existing base set of qstrs
     if args.qstr_header:

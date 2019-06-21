@@ -40,9 +40,6 @@
 
 #define QSTR_LAST_STATIC MP_QSTR_zip
 
-// The current version of .mpy files
-#define MPY_VERSION (4)
-
 // Macros to encode/decode flags to/from the feature byte
 #define MPY_FEATURE_ENCODE_FLAGS(flags) (flags)
 #define MPY_FEATURE_DECODE_FLAGS(feat) ((feat) & 3)
@@ -76,6 +73,12 @@
 #define MPY_FEATURE_ARCH (MP_NATIVE_ARCH_XTENSA)
 #else
 #define MPY_FEATURE_ARCH (MP_NATIVE_ARCH_NONE)
+#endif
+
+#if MICROPY_DYNAMIC_COMPILER
+#define MPY_FEATURE_ARCH_DYNAMIC mp_dynamic_compiler.native_arch
+#else
+#define MPY_FEATURE_ARCH_DYNAMIC MPY_FEATURE_ARCH
 #endif
 
 #if MICROPY_PERSISTENT_CODE_LOAD || (MICROPY_PERSISTENT_CODE_SAVE && !MICROPY_DYNAMIC_COMPILER)
@@ -557,7 +560,7 @@ STATIC void save_obj(mp_print_t *print, mp_obj_t o) {
         } else {
             obj_type = 'b';
         }
-        mp_uint_t len;
+        size_t len;
         const char *str = mp_obj_str_get_data(o, &len);
         mp_print_bytes(print, &obj_type, 1);
         mp_print_uint(print, len);
@@ -731,7 +734,7 @@ void mp_raw_code_save(mp_raw_code_t *rc, mp_print_t *print) {
         #endif
     };
     if (mp_raw_code_has_native(rc)) {
-        header[2] |= MPY_FEATURE_ENCODE_ARCH(MPY_FEATURE_ARCH);
+        header[2] |= MPY_FEATURE_ENCODE_ARCH(MPY_FEATURE_ARCH_DYNAMIC);
     }
     mp_print_bytes(print, header, sizeof(header));
     mp_print_uint(print, QSTR_WINDOW_SIZE);

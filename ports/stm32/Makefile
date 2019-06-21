@@ -42,7 +42,8 @@ OPENOCD ?= openocd
 OPENOCD_CONFIG ?= boards/openocd_stm32f4.cfg
 STARTUP_FILE ?= boards/startup_stm32$(MCU_SERIES).o
 
-CROSS_COMPILE = arm-none-eabi-
+# Select the cross compile prefix
+CROSS_COMPILE ?= arm-none-eabi-
 
 INC += -I.
 INC += -I$(TOP)
@@ -105,6 +106,9 @@ else
 COPT += -Os -DNDEBUG
 endif
 
+# Options for mpy-cross
+MPY_CROSS_FLAGS += -march=armv7m
+
 SRC_LIB = $(addprefix lib/,\
 	libc/string0.c \
 	oofatfs/ff.c \
@@ -112,6 +116,7 @@ SRC_LIB = $(addprefix lib/,\
 	mp-readline/readline.c \
 	netutils/netutils.c \
 	netutils/trace.c \
+	netutils/dhcpserver.c \
 	timeutils/timeutils.c \
 	utils/pyexec.c \
 	utils/interrupt_char.c \
@@ -217,7 +222,7 @@ SRC_C = \
 	usbd_desc.c \
 	usbd_cdc_interface.c \
 	usbd_hid_interface.c \
-	usbd_msc_storage.c \
+	usbd_msc_interface.c \
 	mphalport.c \
 	mpthreadport.c \
 	irq.c \
@@ -225,6 +230,7 @@ SRC_C = \
 	systick.c  \
 	powerctrl.c \
 	pybthread.c \
+	factoryreset.c \
 	timer.c \
 	led.c \
 	pin.c \
@@ -292,8 +298,6 @@ SRC_HAL = $(addprefix $(HAL_DIR)/Src/stm32$(MCU_SERIES)xx_,\
 	hal_adc.c \
 	hal_adc_ex.c \
 	hal_cortex.c \
-	hal_dac.c \
-	hal_dac_ex.c \
 	hal_dma.c \
 	hal_flash.c \
 	hal_flash_ex.c \
@@ -325,6 +329,7 @@ endif
 
 ifeq ($(MCU_SERIES),$(filter $(MCU_SERIES),f4 f7 h7))
 SRC_HAL += $(addprefix $(HAL_DIR)/Src/stm32$(MCU_SERIES)xx_,\
+	hal_mmc.c \
 	hal_sdram.c \
 	hal_dma_ex.c \
 	hal_dcmi.c \
@@ -344,8 +349,15 @@ SRC_USBDEV = $(addprefix $(USBDEV_DIR)/,\
 	class/src/usbd_cdc_msc_hid.c \
 	class/src/usbd_msc_bot.c \
 	class/src/usbd_msc_scsi.c \
-	class/src/usbd_msc_data.c \
 	)
+
+ifeq ($(MICROPY_PY_NETWORK_CYW43),1)
+CFLAGS_MOD += -DMICROPY_PY_NETWORK_CYW43=1
+SRC_C += sdio.c
+EXTMOD_SRC_C += extmod/network_cyw43.c
+DRIVERS_SRC_C += drivers/cyw43/cyw43_ctrl.c drivers/cyw43/cyw43_lwip.c
+LIBS += $(TOP)/drivers/cyw43/libcyw43.a
+endif
 
 ifneq ($(MICROPY_PY_WIZNET5K),0)
 WIZNET5K_DIR=drivers/wiznet5k
@@ -381,6 +393,11 @@ SRC_MOD += $(addprefix $(CC3000_DIR)/src/,\
 	patch.c \
 	patch_prog.c \
 	)
+endif
+
+ifeq ($(MICROPY_SSL_MBEDTLS),1)
+CFLAGS_MOD += -DMBEDTLS_CONFIG_FILE='"mbedtls/mbedtls_config.h"'
+SRC_MOD += mbedtls/mbedtls_port.c
 endif
 
 OBJ =
