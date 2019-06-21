@@ -223,7 +223,21 @@ def unit_test():
 __music__ = music()
 
 play = __music__.play
-pitch = __music__.pitch
+
+def old_pitch(self, freq, tim, pin=25):
+    from machine import Pin, PWM
+    from utime import sleep_ms
+
+    try:
+        pwm = PWM(Pin(pin))
+        pwm.freq(freq)  # set frequency
+        pwm.duty(tim)  # set duty cycle
+        sleep_ms(tim)
+    finally:
+        pwm.deinit()
+
+pitch = old_pitch
+
 set_tempo = __music__.set_tempo
 stop = __music__.stop
 
