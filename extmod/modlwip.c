@@ -57,6 +57,10 @@
 #define DEBUG_printf(...) (void)0
 #endif
 
+// Timeout between closing a TCP socket and doing a tcp_abort on that
+// socket, if the connection isn't closed cleanly in that time.
+#define MICROPY_PY_LWIP_TCP_CLOSE_TIMEOUT_MS (10000)
+
 // All socket options should be globally distinct,
 // because we ignore option levels for efficiency.
 #define IP_ADD_MEMBERSHIP 0x400
@@ -323,6 +327,30 @@ STATIC struct tcp_pcb *volatile *lwip_socket_incoming_array(lwip_socket_obj_t *s
     }
 }
 
+STATIC void lwip_socket_free_incoming(lwip_socket_obj_t *socket) {
+    bool socket_is_listener =
+        socket->type == MOD_NETWORK_SOCK_STREAM
+        && socket->pcb.tcp->state == LISTEN;
+
+    if (!socket_is_listener) {
+        if (socket->incoming.pbuf != NULL) {
+            pbuf_free(socket->incoming.pbuf);
+            socket->incoming.pbuf = NULL;
+        }
+    } else {
+        uint8_t alloc = socket->incoming.connection.alloc;
+        struct tcp_pcb *volatile *tcp_array = lwip_socket_incoming_array(socket);
+        for (uint8_t i = 0; i < alloc; ++i) {
+            // Deregister callback and abort
+            if (tcp_array[i] != NULL) {
+                tcp_poll(tcp_array[i], NULL, 0);
+                tcp_abort(tcp_array[i]);
+                tcp_array[i] = NULL;
+            }
+        }
+    }
+}
+
 /*******************************************************************************/
 // Callback functions for the lwIP raw API.
 
@@ -356,6 +384,8 @@ STATIC void _lwip_udp_incoming(void *arg, struct udp_pcb *upcb, struct pbuf *p, 
 STATIC void _lwip_tcp_error(void *arg, err_t err) {
     lwip_socket_obj_t *socket = (lwip_socket_obj_t*)arg;
 
+    // Free any incoming buffers or connections that are stored
+    lwip_socket_free_incoming(socket);
     // Pass the error code back via the connection variable.
     socket->state = err;
     // If we got here, the lwIP stack either has deallocated or will deallocate the pcb.
@@ -368,6 +398,43 @@ STATIC err_t _lwip_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
 
     socket->state = STATE_CONNECTED;
     return ERR_OK;
+}
+
+// Handle errors (eg connection aborted) on TCP PCBs that have been put on the
+// accept queue but are not yet actually accepted.
+STATIC void _lwip_tcp_err_unaccepted(void *arg, err_t err) {
+    struct tcp_pcb *pcb = (struct tcp_pcb*)arg;
+
+    // The ->connected entry is repurposed to store the parent socket; this is safe
+    // because it's only ever used by lwIP if tcp_connect is called on the TCP PCB.
+    lwip_socket_obj_t *socket = (lwip_socket_obj_t*)pcb->connected;
+
+    // Array is not volatile because thiss callback is executed within the lwIP context
+    uint8_t alloc = socket->incoming.connection.alloc;
+    struct tcp_pcb **tcp_array = (struct tcp_pcb**)lwip_socket_incoming_array(socket);
+
+    // Search for PCB on the accept queue of the parent socket
+    struct tcp_pcb **shift_down = NULL;
+    uint8_t i = socket->incoming.connection.iget;
+    do {
+        if (shift_down == NULL) {
+            if (tcp_array[i] == pcb) {
+                shift_down = &tcp_array[i];
+            }
+        } else {
+            *shift_down = tcp_array[i];
+            shift_down = &tcp_array[i];
+        }
+        if (++i >= alloc) {
+            i = 0;
+        }
+    } while (i != socket->incoming.connection.iput);
+
+    // PCB found in queue, remove it
+    if (shift_down != NULL) {
+        *shift_down = NULL;
+        socket->incoming.connection.iput = shift_down - tcp_array;
+    }
 }
 
 // By default, a child socket of listen socket is created with recv
@@ -384,7 +451,8 @@ STATIC err_t _lwip_tcp_recv_unaccepted(void *arg, struct tcp_pcb *pcb, struct pb
 // from accept callback itself.
 STATIC err_t _lwip_tcp_accept_finished(void *arg, struct tcp_pcb *pcb)
 {
-    lwip_socket_obj_t *socket = (lwip_socket_obj_t*)arg;
+    // The ->connected entry of the pcb holds the listening socket of the accept
+    lwip_socket_obj_t *socket = (lwip_socket_obj_t*)pcb->connected;
     tcp_poll(pcb, NULL, 0);
     exec_user_callback(socket);
     return ERR_OK;
@@ -392,6 +460,11 @@ STATIC err_t _lwip_tcp_accept_finished(void *arg, struct tcp_pcb *pcb)
 
 // Callback for incoming tcp connections.
 STATIC err_t _lwip_tcp_accept(void *arg, struct tcp_pcb *newpcb, err_t err) {
+    // err can be ERR_MEM to notify us that there was no memory for an incoming connection
+    if (err != ERR_OK) {
+        return ERR_OK;
+    }
+
     lwip_socket_obj_t *socket = (lwip_socket_obj_t*)arg;
     tcp_recv(newpcb, _lwip_tcp_recv_unaccepted);
 
@@ -409,6 +482,15 @@ STATIC err_t _lwip_tcp_accept(void *arg, struct tcp_pcb *newpcb, err_t err) {
             // is idle.
             tcp_poll(newpcb, _lwip_tcp_accept_finished, 1);
         }
+
+        // Set the error callback to handle the case of a dropped connection before we
+        // have a chance to take it off the accept queue.
+        // The ->connected entry is repurposed to store the parent socket; this is safe
+        // because it's only ever used by lwIP if tcp_connect is called on the TCP PCB.
+        newpcb->connected = (void*)socket;
+        tcp_arg(newpcb, newpcb);
+        tcp_err(newpcb, _lwip_tcp_err_unaccepted);
+
         return ERR_OK;
     }
 
@@ -536,6 +618,15 @@ STATIC mp_uint_t lwip_udp_receive(lwip_socket_obj_t *socket, byte *buf, mp_uint_
         } \
         assert(socket->pcb.tcp);
 
+// Version of above for use when lock is held
+#define STREAM_ERROR_CHECK_WITH_LOCK(socket) \
+        if (socket->state < 0) { \
+            *_errno = error_lookup_table[-socket->state]; \
+            MICROPY_PY_LWIP_EXIT \
+            return MP_STREAM_ERROR; \
+        } \
+        assert(socket->pcb.tcp);
+
 
 // Helper function for send/sendto to handle TCP packets
 STATIC mp_uint_t lwip_tcp_send(lwip_socket_obj_t *socket, const byte *buf, mp_uint_t len, int *_errno) {
@@ -572,7 +663,7 @@ STATIC mp_uint_t lwip_tcp_send(lwip_socket_obj_t *socket, const byte *buf, mp_ui
         }
 
         // While we waited, something could happen
-        STREAM_ERROR_CHECK(socket);
+        STREAM_ERROR_CHECK_WITH_LOCK(socket);
     }
 
     u16_t write_len = MIN(available, len);
@@ -799,15 +890,28 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(lwip_socket_listen_obj, lwip_socket_listen);
 STATIC mp_obj_t lwip_socket_accept(mp_obj_t self_in) {
     lwip_socket_obj_t *socket = MP_OBJ_TO_PTR(self_in);
 
-    if (socket->pcb.tcp == NULL) {
-        mp_raise_OSError(MP_EBADF);
-    }
     if (socket->type != MOD_NETWORK_SOCK_STREAM) {
         mp_raise_OSError(MP_EOPNOTSUPP);
     }
+
+    // Create new socket object, do it here because we must not raise an out-of-memory
+    // exception when the LWIP concurrency lock is held
+    lwip_socket_obj_t *socket2 = m_new_obj_with_finaliser(lwip_socket_obj_t);
+    socket2->base.type = &lwip_socket_type;
+
+    MICROPY_PY_LWIP_ENTER
+
+    if (socket->pcb.tcp == NULL) {
+        MICROPY_PY_LWIP_EXIT
+        m_del_obj(lwip_socket_obj_t, socket2);
+        mp_raise_OSError(MP_EBADF);
+    }
+
     // I need to do this because "tcp_accepted", later, is a macro.
     struct tcp_pcb *listener = socket->pcb.tcp;
     if (listener->state != LISTEN) {
+        MICROPY_PY_LWIP_EXIT
+        m_del_obj(lwip_socket_obj_t, socket2);
         mp_raise_OSError(MP_EINVAL);
     }
 
@@ -815,25 +919,28 @@ STATIC mp_obj_t lwip_socket_accept(mp_obj_t self_in) {
     struct tcp_pcb *volatile *incoming_connection = &lwip_socket_incoming_array(socket)[socket->incoming.connection.iget];
     if (*incoming_connection == NULL) {
         if (socket->timeout == 0) {
+            MICROPY_PY_LWIP_EXIT
+            m_del_obj(lwip_socket_obj_t, socket2);
             mp_raise_OSError(MP_EAGAIN);
         } else if (socket->timeout != -1) {
-            for (mp_uint_t retries = socket->timeout / 100; retries--;) {
+            mp_uint_t retries = socket->timeout / 100;
+            while (*incoming_connection == NULL) {
+                MICROPY_PY_LWIP_EXIT
+                if (retries-- == 0) {
+                    m_del_obj(lwip_socket_obj_t, socket2);
+                    mp_raise_OSError(MP_ETIMEDOUT);
+                }
                 mp_hal_delay_ms(100);
-                if (*incoming_connection != NULL) break;
-            }
-            if (*incoming_connection == NULL) {
-                mp_raise_OSError(MP_ETIMEDOUT);
+                MICROPY_PY_LWIP_REENTER
             }
         } else {
             while (*incoming_connection == NULL) {
+                MICROPY_PY_LWIP_EXIT
                 poll_sockets();
+                MICROPY_PY_LWIP_REENTER
             }
         }
     }
-
-    // create new socket object
-    lwip_socket_obj_t *socket2 = m_new_obj_with_finaliser(lwip_socket_obj_t);
-    socket2->base.type = &lwip_socket_type;
 
     // We get a new pcb handle...
     socket2->pcb.tcp = *incoming_connection;
@@ -855,6 +962,8 @@ STATIC mp_obj_t lwip_socket_accept(mp_obj_t self_in) {
     tcp_recv(socket2->pcb.tcp, _lwip_tcp_recv);
 
     tcp_accepted(listener);
+
+    MICROPY_PY_LWIP_EXIT
 
     // make the return value
     uint8_t ip[NETUTILS_IPV4ADDR_BUFSIZE];
@@ -1237,6 +1346,13 @@ STATIC mp_uint_t lwip_socket_write(mp_obj_t self_in, const void *buf, mp_uint_t 
     return MP_STREAM_ERROR;
 }
 
+STATIC err_t _lwip_tcp_close_poll(void *arg, struct tcp_pcb *pcb) {
+    // Connection has not been cleanly closed so just abort it to free up memory
+    tcp_poll(pcb, NULL, 0);
+    tcp_abort(pcb);
+    return ERR_OK;
+}
+
 STATIC mp_uint_t lwip_socket_ioctl(mp_obj_t self_in, mp_uint_t request, uintptr_t arg, int *errcode) {
     lwip_socket_obj_t *socket = MP_OBJ_TO_PTR(self_in);
     mp_uint_t ret;
@@ -1290,20 +1406,26 @@ STATIC mp_uint_t lwip_socket_ioctl(mp_obj_t self_in, mp_uint_t request, uintptr_
         }
 
     } else if (request == MP_STREAM_CLOSE) {
-        bool socket_is_listener = false;
-
         if (socket->pcb.tcp == NULL) {
             MICROPY_PY_LWIP_EXIT
             return 0;
         }
 
         // Deregister callback (pcb.tcp is set to NULL below so must deregister now)
+        tcp_arg(socket->pcb.tcp, NULL);
+        tcp_err(socket->pcb.tcp, NULL);
         tcp_recv(socket->pcb.tcp, NULL);
+
+        // Free any incoming buffers or connections that are stored
+        lwip_socket_free_incoming(socket);
 
         switch (socket->type) {
             case MOD_NETWORK_SOCK_STREAM: {
-                if (socket->pcb.tcp->state == LISTEN) {
-                    socket_is_listener = true;
+                if (socket->pcb.tcp->state != LISTEN) {
+                    // Schedule a callback to abort the connection if it's not cleanly closed after
+                    // the given timeout.  The callback must be set before calling tcp_close since
+                    // the latter may free the pcb; if it doesn't then the callback will be active.
+                    tcp_poll(socket->pcb.tcp, _lwip_tcp_close_poll, MICROPY_PY_LWIP_TCP_CLOSE_TIMEOUT_MS / 500);
                 }
                 if (tcp_close(socket->pcb.tcp) != ERR_OK) {
                     DEBUG_printf("lwip_close: had to call tcp_abort()\n");
@@ -1314,25 +1436,9 @@ STATIC mp_uint_t lwip_socket_ioctl(mp_obj_t self_in, mp_uint_t request, uintptr_
             case MOD_NETWORK_SOCK_DGRAM: udp_remove(socket->pcb.udp); break;
             //case MOD_NETWORK_SOCK_RAW: raw_remove(socket->pcb.raw); break;
         }
+
         socket->pcb.tcp = NULL;
         socket->state = _ERR_BADF;
-        if (!socket_is_listener) {
-            if (socket->incoming.pbuf != NULL) {
-                pbuf_free(socket->incoming.pbuf);
-                socket->incoming.pbuf = NULL;
-            }
-        } else {
-            uint8_t alloc = socket->incoming.connection.alloc;
-            struct tcp_pcb *volatile *tcp_array = lwip_socket_incoming_array(socket);
-            for (uint8_t i = 0; i < alloc; ++i) {
-                // Deregister callback and abort
-                if (tcp_array[i] != NULL) {
-                    tcp_poll(tcp_array[i], NULL, 0);
-                    tcp_abort(tcp_array[i]);
-                    tcp_array[i] = NULL;
-                }
-            }
-        }
         ret = 0;
 
     } else {

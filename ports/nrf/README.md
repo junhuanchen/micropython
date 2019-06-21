@@ -34,6 +34,8 @@ This is a port of MicroPython to the Nordic Semiconductor nRF series of chips.
   * [Adafruit Feather nRF52](https://www.adafruit.com/product/3406)
   * [Thingy:52](http://www.nordicsemi.com/eng/Products/Nordic-Thingy-52)
   * [Arduino Primo](http://www.arduino.org/products/boards/arduino-primo)
+  * [IBK-BLYST-NANO breakout board](https://www.crowdsupply.com/i-syst/blyst-nano)
+  * [BLUEIO-TAG-EVIM BLYST Nano Sensor board](https://www.crowdsupply.com/i-syst/blyst-nano)
 * nRF52840
   * [PCA10056](http://www.nordicsemi.com/eng/Products/nRF52840-Preview-DK)
 
@@ -55,7 +57,21 @@ Alternatively the target board could be defined:
 
      make BOARD=pca10040
      make BOARD=pca10040 flash
-     
+
+## Compile without LTO enabled
+
+As a space optimization, LTO (Link Time Optimization) has been enabled on all
+targets in the nrf-port. The `-flto` linker flag can be toggled easily by using
+the argument LTO when building. The example below shows how to disable LTO for
+the compilation:
+
+    make BOARD=pca10040 LTO=0
+
+**Note**: There have been several issues with use of LTO in conjunction with
+GNU ARM Embedded Toolchain 7.2.1/4Q17. It's recommended to use a toolchain after
+this release, for example 7.3.1/2Q18 or 8.2.1/4Q18. The alternative would be to
+build the target using the LTO=0 as described above.
+ 
 ## Compile and Flash with Bluetooth Stack
 
 First prepare the bluetooth folder by downloading Bluetooth LE stacks and headers:
@@ -106,7 +122,19 @@ wt51822_s4at         | s110                    | Peripheral             | Manual
 pca10040             | s132                    | Peripheral and Central | [Segger](#segger-targets)
 feather52            | s132                    | Peripheral and Central | Manual, SWDIO and SWCLK solder points on the bottom side of the board
 arduino_primo        | s132                    | Peripheral and Central | [PyOCD](#pyocdopenocd-targets)
+ibk_blyst_nano       | s132                    | Peripheral and Central | [IDAP](#idap-midap-link-targets)
+idk_blyst_nano       | s132                    | Peripheral and Central | [IDAP](#idap-midap-link-targets)
+blueio_tag_evim      | s132                    | Peripheral and Central | [IDAP](#idap-midap-link-targets)
 pca10056             | s140                    | Peripheral and Central | [Segger](#segger-targets)
+
+## IDAP-M/IDAP-Link Targets
+
+Install the necessary tools to flash and debug using IDAP-M/IDAP-Link CMSIS-DAP Debug JTAG:
+
+[IDAPnRFProg for Linux](https://sourceforge.net/projects/idaplinkfirmware/files/Linux/IDAPnRFProg_1_7_190320.zip/download)
+[IDAPnRFProg for OSX](https://sourceforge.net/projects/idaplinkfirmware/files/OSX/IDAPnRFProg_1_7_190320.zip/download)
+[IDAPnRFProg for Windows](https://sourceforge.net/projects/idaplinkfirmware/files/Windows/IDAPnRFProg_1_7_190320.zip/download)
+
 
 ## Segger Targets
 

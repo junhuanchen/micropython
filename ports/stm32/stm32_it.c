@@ -181,7 +181,7 @@ void HardFault_C_Handler(ExceptionRegisters_t *regs) {
     if ((void*)&_ram_start <= (void*)regs && (void*)regs < (void*)&_ram_end) {
         mp_hal_stdout_tx_str("Stack:\r\n");
         uint32_t *stack_top = &_estack;
-        if ((void*)regs < (void*)&_heap_end) {
+        if ((void*)regs < (void*)&_sstack) {
             // stack not in static stack area so limit the amount we print
             stack_top = (uint32_t*)regs + 32;
         }
@@ -735,7 +735,7 @@ void USART6_IRQHandler(void) {
     IRQ_EXIT(USART6_IRQn);
 }
 
-#if defined(UART8)
+#if defined(UART7)
 void UART7_IRQHandler(void) {
     IRQ_ENTER(UART7_IRQn);
     uart_irq_handler(7);
@@ -748,6 +748,22 @@ void UART8_IRQHandler(void) {
     IRQ_ENTER(UART8_IRQn);
     uart_irq_handler(8);
     IRQ_EXIT(UART8_IRQn);
+}
+#endif
+
+#if defined(UART9)
+void UART9_IRQHandler(void) {
+    IRQ_ENTER(UART9_IRQn);
+    uart_irq_handler(9);
+    IRQ_EXIT(UART9_IRQn);
+}
+#endif
+
+#if defined(UART10)
+void UART10_IRQHandler(void) {
+    IRQ_ENTER(UART10_IRQn);
+    uart_irq_handler(10);
+    IRQ_EXIT(UART10_IRQn);
 }
 #endif
 
@@ -790,6 +806,26 @@ void CAN2_SCE_IRQHandler(void) {
     IRQ_ENTER(CAN2_SCE_IRQn);
     can_sce_irq_handler(PYB_CAN_2);
     IRQ_EXIT(CAN2_SCE_IRQn);
+}
+#endif
+
+#if defined(MICROPY_HW_CAN3_TX)
+void CAN3_RX0_IRQHandler(void) {
+    IRQ_ENTER(CAN3_RX0_IRQn);
+    can_rx_irq_handler(PYB_CAN_3, CAN_FIFO0);
+    IRQ_EXIT(CAN3_RX0_IRQn);
+}
+
+void CAN3_RX1_IRQHandler(void) {
+    IRQ_ENTER(CAN3_RX1_IRQn);
+    can_rx_irq_handler(PYB_CAN_3, CAN_FIFO1);
+    IRQ_EXIT(CAN3_RX1_IRQn);
+}
+
+void CAN3_SCE_IRQHandler(void) {
+    IRQ_ENTER(CAN3_SCE_IRQn);
+    can_sce_irq_handler(PYB_CAN_3);
+    IRQ_EXIT(CAN3_SCE_IRQn);
 }
 #endif
 
