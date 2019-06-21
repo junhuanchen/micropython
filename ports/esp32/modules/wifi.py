@@ -3,6 +3,8 @@ import network
 
 wlan = network.WLAN(network.STA_IF)
 
+ifconfig = wlan.ifconfig
+
 if wlan.active() is False:
     wlan.active(True)
 
