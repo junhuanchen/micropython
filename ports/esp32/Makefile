@@ -221,6 +221,7 @@ SRC_C = \
 	machine_wdt.c \
 	mpthreadport.c \
 	machine_rtc.c \
+	modserial.c \
 	zwlib/Crc.c \
 	zwlib/Rsa.c \
 	zwlib/BaseSeven.c \
